@@ -1,0 +1,22 @@
+inherit_gem:
+    rubocop-shopify: rubocop.yml
+
+require: 
+  - rubocop-rspec
+  - rubocop-rails
+
+Style/MethodCallWithArgsParentheses: 
+  Enabled: false
+Style/SymbolArray:
+  Enabled: true
+  EnforcedStyle: percent
+
+Layout/HashAlignment:
+  EnforcedHashRocketStyle: table
+  EnforcedColonStyle: table
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: double_quotes
+Style/WordArray:
+  EnforcedStyle: percent
