@@ -1,0 +1,29 @@
+definition:
+  raw: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  id: def_v1_auth
+  timestamp: 2026-04-18T18:00:00Z
+route:
+  route_auth_main: 
+    name: route_auth_main
+    tree_state:
+      current:
+        max_connections: 500
+      commits: []
+stop:
+  init_load:
+    applied: true
+    changeset: []
+    context:
+      parameters:
+        retry: true
+commit:
+  id: c_99
+  changeset:
+    - op: add
+      path: /max_connections
+      value: 500
+  initial_state: {}
+  final_state:
+    max_connections: 500
+  contains: []
+  

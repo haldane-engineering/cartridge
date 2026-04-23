@@ -14,7 +14,7 @@ gem 'puma', '~> 5.0'
 # Build JSON APIs with ease. Read more: https://github.com/rails/jbuilder
 # gem 'jbuilder', '~> 2.7'
 # Use Redis adapter to run Action Cable in production
-# gem 'redis', '~> 4.0'
+gem 'redis', '~> 4.0'
 gem 'bcrypt', '~> 3.1.7'
 
 # Use Active Storage variant
@@ -41,6 +41,8 @@ gem 'rack-cors'
 
 gem 'mailtrap'
 
+gem 'concurrent-ruby', require: 'concurrent'
+gem 'concurrent-ruby-ext'
 
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin AJAX possible
 # gem 'rack-cors'
@@ -68,3 +70,5 @@ end
 gem 'tzinfo-data', platforms: %i[mingw mswin x64_mingw jruby]
 
 gem "pg", "~> 1.6"
+
+gem 'diderot', path: 'diderot'
