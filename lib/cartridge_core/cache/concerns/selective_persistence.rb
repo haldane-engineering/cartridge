@@ -4,14 +4,14 @@ module CartridgeCore
   module Cache
     module Concerns
       module SelectivePersistence
-        def self.included(klass) = klass.extends(ClassMethods)
+        def self.included(klass) = klass.extend(ClassMethods)
 
         def persistable_state
-          self.class.persistable_keys.present? ? super.to_json.slice(*self.class.persistable_keys.map(&:to_s)) : super.to_json
+          self.class.persistable_keys.present? ? as_json.slice(*self.class.persistable_keys.map(&:to_s)) : as_json
         end
 
-        alias_method :as_json, :persistable_state
-        alias_method :to_json, :persistable_state
+        # alias_method :as_json, :persistable_state
+        # alias_method :to_json, :persistable_state
 
         private
 

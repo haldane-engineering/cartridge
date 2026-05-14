@@ -2,7 +2,7 @@
 
 module CartridgeCore
   module Errors
-    module DyanmicPropagation
+    module DynamicPropagation
       def halt!(error_key, message = nil)
         error_key = error_key.to_s
         self.class.class_eval <<-RUBY

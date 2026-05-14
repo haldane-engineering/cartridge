@@ -30,8 +30,8 @@ module CartridgeCore
   module Entities
     STATE_KEYS = %i[version current final changes id commits main]
     # Examp
-    TreeState < Struct.new(*STATE_KEYS, keyword_init:) do
-      include ::Concerns::TreeState::StateOperations
+    TreeState = Struct.new(*STATE_KEYS, keyword_init: true) do
+      include ::CartridgeCore::Entities::Concerns::TreeState::StateOperations
       def self.state_keys = STATE_KEYS
 
       def persist!(strategy)

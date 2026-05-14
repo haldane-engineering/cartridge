@@ -2,12 +2,14 @@
 
 module CartridgeCore
   module Entities
-    module TreeState
+    module TreeStates
       CommitState = Struct.new(*%i(original final), keyword_init: true)
-      RepositoryCommit = Struct.new(%i(id commit applied applied_at), keyword_init: true) do
+      RepositoryCommit = Struct.new(*%i(id commit applied applied_at), keyword_init: true) do
+        include ::CartridgeCore::Cache::Concerns::SelectivePersistence
+        persists!(*%i(id commit applied applied_at))
       end
 
-      Commit = Struct.new(*%i(state rollback_state contains changeset), keyword_init: true) do
+      Commit = Struct.new(*%i(state rollback_state contains changeset id), keyword_init: true) do
         include ::CartridgeCore::Cache::Concerns::SelectivePersistence
         persists!(*%i(state rollback_state contains changeset))
 

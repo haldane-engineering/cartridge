@@ -41,8 +41,10 @@ gem 'rack-cors'
 
 gem 'mailtrap'
 
-gem 'concurrent-ruby', require: 'concurrent'
+gem 'concurrent-ruby', '1.3.4', require: 'concurrent'
 gem 'concurrent-ruby-ext'
+
+gem 'diderot', path: 'lib/engines/diderot'
 
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin AJAX possible
 # gem 'rack-cors'
@@ -70,5 +72,3 @@ end
 gem 'tzinfo-data', platforms: %i[mingw mswin x64_mingw jruby]
 
 gem "pg", "~> 1.6"
-
-gem 'diderot', path: 'diderot'

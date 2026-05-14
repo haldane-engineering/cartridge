@@ -2,13 +2,13 @@
 
 module CartridgeCore
   module Entities
-    STOP_KEYS = %i(applied changeset name route checks balancers)
+    STOP_KEYS = %i(applied changeset name route checks balancers index parameters)
     Stop = Struct.new(*STOP_KEYS, keyword_init: true) do
       include CartridgeCore::Services::EventBus::Concerns::Propagation
       include CartridgeCore::Cache::Concerns::SelectivePersistence
       include CartridgeCore::Entities::Concerns::StateIntegrityEnforcement::Core
 
-      persists(*%i(applied name changeset))
+      persists!(*%i(applied name changeset))
 
       def self.apply!(*args)
         new(*args).apply!

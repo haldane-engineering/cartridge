@@ -1,10 +1,8 @@
 # frozen_string_literal: true
 
-require_relative 'lib/diderot/version'
-
 Gem::Specification.new do |spec|
   spec.name        = 'diderot'
-  spec.version     = Diderot::VERSION
+  spec.version     = '0.1.0'
   spec.authors     = ['']
   spec.email       = ['hasstrup.ezekiel@gmail.com']
   spec.homepage    = 'https://haldaneengineering.com'
@@ -22,5 +20,8 @@ Gem::Specification.new do |spec|
 
   spec.files = Dir['{app,config,db,lib}/**/*', 'MIT-LICENSE', 'Rakefile', 'README.md']
 
+  spec.add_dependency 'annotate', '~> 3.2.0'
+  spec.add_dependency 'pg', '~> 1.6'
+  spec.add_dependency 'pry', '~> 0.14.2'
   spec.add_dependency 'rails', '~> 6.1.7', '>= 6.1.7.10'
 end

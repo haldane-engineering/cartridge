@@ -1,8 +1,10 @@
 # frozen_string_literal: true
 
 module CartridgeCore
-  class Orchestrator < BaseService
+  class Orchestrator
     include ::CartridgeCore::Errors::DynamicPropagation
+
+    def self.call(key, **opts) = new(key, **opts).call
 
     def initialize(timeline_key, **opts)
       @timeline_key = timeline_key
@@ -29,17 +31,16 @@ module CartridgeCore
       #  after taking a version snapshot, and also saves the diffs in a way that the changes could be played back
       # for each unit of the sequence
       sort_routes_by_sequence(timeline.routes).map do |route|
-        tree.register_activity!(route, :route_application_start) # remember that at this point route could also be [1,2]
+        # remember that at this point route could also be [1,2]
         # after sorting through the routes, it could look like this [RouteClass1, [RouteClass2, RouteClass3]]
         if route.is_a?(CartridgeCore::Entities::Route)
-          route.use_timeline!(timeline)
-          ::CartridgeCore::Services::Routes::TraversalService.call(route)
+          route.use_timeline!(timeline).traverse!
         else
           reconciler = ::CartridgeCore::Entities::Reconciler.new
-          routes = routes.map { |route| ->() { route.use_timeline!(timeline).traverse! } }
+          # route here is a misnomer -> it will be a route group in this stead
+          routes = route.map { |route| ->() { route.use_timeline!(timeline).traverse! } }
           reconciler.concurrently_execute_with_reconciliation!(routes)
         end
-        tree.register_activity!(route, :route_application_end)
       end
 
       timeline.reload!

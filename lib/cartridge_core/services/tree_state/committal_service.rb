@@ -5,7 +5,7 @@ module CartridgeCore
     module TreeState
       class CommittalService < BaseService
         def initialize(entity, changeset:, state:)
-          @entity = ::CartridgeCore::Decorators::TreeState::CommitableEntityDecorator.decorate(entity)
+          @entity = ::CartridgeCore::Decorators::TreeStates::CommitableEntityDecorator.decorate(entity)
           @changeset = changeset
           @new_state = state
         end
@@ -36,7 +36,7 @@ module CartridgeCore
             commit = entity.tree_state.preceeding_commit_for(commit_opts.dig(:contains).last)
             commit.assign_attributes!(**commit_opts)
           else
-            ::CartridgeCore::Entities::TreeState::Commit.new(commit_opts.merge(id: commit_id, changeset: changeset))
+            ::CartridgeCore::Entities::TreeStates::Commit.new(commit_opts.merge(id: commit_id, changeset: changeset))
           end
           commit.assign_original_state!(original_tree_state)
           # first rebuild mergeable state

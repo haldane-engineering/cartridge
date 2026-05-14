@@ -14,6 +14,7 @@ module CartridgeCore
         end
 
         def call
+          route.timeline.register_activity!(route, :route_application_start)
           # assume here that sequence looks like this -> ["source_population", ["available_games_retrieval", 'game_logs_retrieval]]
           preselect_stops_in_context(populate_stops_with_sequence(route.stops)).each do |stop|
             next process_stops_with_reconciler(stop) if stop.is_a?(Array)
@@ -24,6 +25,8 @@ module CartridgeCore
             # internally sets it to the attribute. It also updates the context.
             commit_stop_changeset_to_tree_state!(stop.apply!)
           end
+        ensure
+          route.timeline.register_activity!(route, :route_application_end)
         end
 
         private
@@ -47,7 +50,8 @@ module CartridgeCore
 
         def stop_for(index)
           stop_entry = route.stops.values.find { |stop| stop.dig(:index) == index }
-          "#{route.name}::Stops::#{stop_entry.dig(:name).camelize}".constantize.new(route:)
+          CartridgeCore::Entities::Stop.new(**stop_entry.slice(*%i(name)).merge(route:))
+          # "#{route.name}::Stops::#{stop_entry.dig(:name).camelize}".constantize.new(route:)
         end
 
         # rubocop:disable Style/NestedTernaryOperator

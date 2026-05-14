@@ -29,7 +29,7 @@ module CartridgeCore
 
           stop_class = "#{route.name}/#{stop.name}".camelize.constantize
           # route.context.parameters.dig(stop.name) -> will yield list of passed params
-          changeset, errors = stop_class.call(route.tree_state.current, route)
+          changeset, errors = stop_class.with_changeset_context(-> { stop_class.call(route.tree_state.current, route) })
           return fail!(stop, :stop_application_error, errors.map(&:message)) if errors.any?
 
           balancer_errors = populate_balancers(changeset).map(&:apply!)

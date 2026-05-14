@@ -3,6 +3,9 @@ timelines:
     description: Generate NBA highlights
     sequence: [0, [1, 2]]
     strategy: merge
+    reconcilers:
+        log_replay_reconciler:
+          sequence: [1,2]
     routes:
       source_population:
         name: source_population
@@ -29,7 +32,7 @@ timelines:
                 using: available_games_retrieval/check
             balancers:
               - required: []
-                using: 
+                using: available_games_retrieval/balancer
           game_replays_retrieval:
             name: game_replays_retrieval
             index: 1
@@ -41,7 +44,7 @@ timelines:
                 using: game_replays_downloader/balancer
           game_logs_retrieval:
             index: 2
-            name: Download game logs from sportsradar
+            name: game_logs_retrieval
             checks:
               - required: []
                 using: game_logs_retrieval/check
@@ -51,16 +54,16 @@ timelines:
         reconcilers:
           log_replay_reconciler:
             sequence: [1,2]
-      log_based_replay_slicing:
-        name: Log Based Game replay slicing
-        loops: true
-        description: 
-          For each of the games that has it's log and video downloaded, slice the replay
-          into chunks and store it in a folder in s3
-        checks: 
-          - required: []
-            using: log_based_replay_slicing/check
-        balancers:
-          - required: []
-            using: log_based_replay_slicing/balancer
-        sequence: []          
+      # log_based_replay_slicing:
+      #   name: Log Based Game replay slicing
+      #   loops: true
+      #   description: 
+      #     For each of the games that has it's log and video downloaded, slice the replay
+      #     into chunks and store it in a folder in s3
+      #   checks: 
+      #     - required: []
+      #       using: log_based_replay_slicing/check
+      #   balancers:
+      #     - required: []
+      #       using: log_based_replay_slicing/balancer
+      #   sequence: []          

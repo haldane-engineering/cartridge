@@ -35,11 +35,10 @@
 # }]
 module CartridgeCore
   class ICache
-    include CartridgeCore::Errors::Concerns::DynamicErrorPropagation
+    include CartridgeCore::Errors::DynamicPropagation
 
-    def initialize(adapter: :redis)
-      build_schema!
-      @adapter = adapters[adapter].new(:catridge)
+    def initialize(adapter_type: :redis)
+      @adapter = adapters[adapter_type].new(:cartridge)
       adapter.setup!
     end
 
@@ -53,14 +52,13 @@ module CartridgeCore
 
     def timeline_state_for(definition_hash)
       @sample_definition = ::CartridgeCore::Entities::Definition.new(id: definition_hash)
-      timeline = adapter.get({ timeline: { definition_id: definition_hash } }) || setup_initial_timeline!
+      timeline = adapter.get(timeline: { definition_id: definition_hash }).dig(:timeline) || setup_initial_timeline!
       load!(timeline.dig(:id))
     end
 
     # args here are timeline_id and the timeline persistable_state
     def snapshot!(*args)
       adapter.snapshot!(*args)
-      load!(args.first) # timeline_id is the first args
     end
 
     private
@@ -69,7 +67,7 @@ module CartridgeCore
 
     def setup_initial_timeline!
       snapshot!(initial_tree_state[:id], initial_tree_state)
-      load!(initial_tree_state[:id])
+      adapter.load!(initial_tree_state[:id])
     end
 
     def initial_tree_state
@@ -77,18 +75,19 @@ module CartridgeCore
         r_timestamp = Time.parse('3rd Feb 1996 10:30pm').to_i # 823383000, My Birthday hahahahaha
         @sample_definition ||= factory(::CartridgeCore::Entities::Definition).build
         sample_route = factory(::CartridgeCore::Entities::Route).build
-        real_commit = factory(::CartridgeCore::Entities::TreeState::Commit).build
-        initial_commit = ::CartridgeCore::Entities::RepositoryCommit.new(
+        real_commit = factory(::CartridgeCore::Entities::TreeStates::Commit).build
+        sample_parameter_set = factory(::CartridgeCore::Entities::Trees::Parameter).build
+        sample_event = ::CartridgeCore::Entities::EventBus::Event.new(title: :initialized_state, id: r_timestamp)
+        initial_commit = ::CartridgeCore::Entities::TreeStates::RepositoryCommit.new(
           commit: real_commit,
           id: real_commit.id,
           applied: true,
           applied_at: r_timestamp,
         )
-
         {
           id:            SecureRandom.hex(8),
           head:          r_timestamp,
-          definition_id: sample_definition.id,
+          definition_id: @sample_definition.id,
           definitions:   [{ raw: @sample_definition.to_json, id: @sample_definition.id, timestamp: r_timestamp }],
           trees:         {
             "#{r_timestamp}": {
@@ -109,21 +108,25 @@ module CartridgeCore
       end
     end
 
-    def adapters(adapter_key)
-      @adapters ||= {
-        redis: ::CatridgeCore::Cache::Adapters::RedisAdapter,
+    def adapters
+      {
+        redis: ::CartridgeCore::Cache::Adapters::RedisAdapter,
       }
     end
 
-    def factory(klass) = Factory.build(klass)
+    def factory(klass) = Factory.new(klass)
 
     class Factory
       def self.build(*args) = new.build(*args)
 
-      def build(klass)
-        factory_key = klass.name.split('::').last.downcase
-        yaml_content = YAML.safe_load_file(Rails.root.join('lib/cartridge_core/cache/factory/samples.yml'))
-        klass.new(**yaml_content[factory_key])
+      def initialize(klass)
+        @klass = klass
+      end
+
+      def build
+        factory_key = @klass.name.split('::').last.downcase.to_sym
+        yaml_content = YAML.safe_load_file(Rails.root.join('lib/cartridge_core/cache/factory/samples.yml')).deep_symbolize_keys
+        @klass.new(**yaml_content[factory_key])
       end
     end
   end

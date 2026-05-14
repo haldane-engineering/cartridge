@@ -3,8 +3,8 @@
 module CartridgeCore
   module Entities
     Balancer = Struct.new(*%i(name entity), keyword_init: true) do
-      include StateIntegrityEnforcement
-      guard_type :check
+      include ::CartridgeCore::Entities::Concerns::StateIntegrityEnforcement
+      guard_type :balancer
     end
   end
 end

@@ -6,7 +6,7 @@ module CartridgeCore
       module TreeState
         module CommitOperations
           def commit!(changeset, state, **commit_opts)
-            ::CartridgeCore::Services::TreeState::CommittalService.new(self, changeset:, state:)
+            ::CartridgeCore::Services::TreeStates::CommittalService.new(self, changeset:, state:)
               .using_commit_opts(**commit_opts)
               .commit!
           end

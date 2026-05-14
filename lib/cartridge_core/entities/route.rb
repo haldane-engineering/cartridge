@@ -6,7 +6,7 @@ module CartridgeCore
     Route = Struct.new(*ROUTE_KEYS, keyword_init: true) do
       include CartridgeCore::Entities::Concerns::TreeState::CommitOperations
       include CartridgeCore::Services::EventBus::Concerns::Propagation
-      include CartridgeCore::Errors::Concerns::DynamicErrorPropagation
+      include CartridgeCore::Errors::DynamicPropagation
       include CartridgeCore::Cache::Concerns::SelectivePersistence
       include CartridgeCore::Entities::Concerns::StateIntegrityEnforcement::Core
 
@@ -26,7 +26,7 @@ module CartridgeCore
         ::CartridgeCore::Services::Routes::TraversalService.call(self)
       end
 
-      alias_method :parent, :timelines
+      alias_method :parent, :timeline
     end
   end
 end

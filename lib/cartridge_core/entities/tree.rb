@@ -44,20 +44,6 @@ module CartridgeCore
       end
 
       delegate :using_namespace, to: :context
-
-      Context = Struct.new(*%i(parameters load_namespace), keyword_init: true) do
-        def using_namespace(filenames) = filenames.map { |fname| "#{load_namespace || ""}/#{fname}" }
-      end
-
-      Parameters = OpenStruct.new do
-        include ::CartridgeCore::Cache::Concerns::SelectivePersistence
-
-        delegate :slice, to: :to_h
-        delegate :dig, to: :to_h
-        # example = get('source_population.available_games_retrieval.source_feed')
-        def get(key) = dig(*key.split('.'))
-        class << self; def wrap(value) = new(**value); end
-      end
     end
   end
 end
