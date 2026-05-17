@@ -31,7 +31,7 @@ module CartridgeCore
       #  after taking a version snapshot, and also saves the diffs in a way that the changes could be played back
       # for each unit of the sequence
       sort_routes_by_sequence(timeline.routes).map do |route|
-        # remember that at this point route could also be [1,2]
+        # remember that at this point rsoute could also be [1,2]
         # after sorting through the routes, it could look like this [RouteClass1, [RouteClass2, RouteClass3]]
         if route.is_a?(CartridgeCore::Entities::Route)
           route.use_timeline!(timeline).traverse!

@@ -9,7 +9,7 @@ module CartridgeCore
         FLAT_OBJ_TYPES = [String, NilClass, Integer, Float].freeze
 
         # I3ndex doc looks like this
-        # timelines: {}, events: {}, trees: {}, commits: {}
+        # timelines: {}, events: {}, trees: {}, commits: {}, resolver_processes: {}, resolver_process_units
         def initialize(root)
           @statements = []
           @root_w_namespace = prefix_root(root) # could this include namespace? msaservices:cartridge
@@ -37,9 +37,10 @@ module CartridgeCore
         end
 
         def snapshot!(*args)
-          # persist definitions, events, commits
-          base_idx_keys.map { |key| [key, args] }.each(&method(:extract_values_and_persist!))
-          persist_tree_head!(*args)
+          # args -> timeline_tree, time_line_tree
+          # persist definitions, events, commits,
+          extract_and_persist_root_indices!(*args)
+          # persist_tree_head!(*args)
           persist_timeline!(*args)
         rescue
           # propagate the error here
@@ -61,7 +62,7 @@ module CartridgeCore
             index = k.to_s.split('_').first.pluralize
             # assumption here should be that the first key in the value entry will always be id
             # TODO - look into how you can combine AND requests here
-            # sigh - eventually have to do some client side filtering here - Tired :((
+            # sigh - eventually have to do some client side filtering here ^- Tired :((
             result = redis.call('JSON.GET', root_w_namespace, "$.#{index}.#{v.keys.first}", v.values.first)
             JSON.parse(result) if result
           end
@@ -71,6 +72,10 @@ module CartridgeCore
         private
 
         attr_reader :statements, :root_w_namespace
+
+        def extract_and_persist_root_indices!(*args)
+          root_idx_keys.map { |key| [key, args] }.each(&method(:extract_values_and_persist!))
+        end
 
         def indices_already_set_up?
           index_resp = redis.call('JSON.GET', root_w_namespace, '$') || empty_index_response
@@ -87,21 +92,22 @@ module CartridgeCore
 
         def persist_tree_head!(_, tree_state)
           tree = tree_state.dig(:trees, :"#{tree_state[:head]}")
-          # ensure we're only storing refs
-          base_idx_keys.each do |key|
+          # ensure we're only storing refs -> this is the main timeline
+          root_idx_keys.each do |key|
             tree[key] = tree_state[key].map(&:deep_symbolize_keys).pluck(:id) if tree.key?(key)
           end
           redis.call('JSON.SET', root_w_namespace, "$.trees.#{tree_state.dig(:head)}", tree.to_json)
-          tree_state[:trees]
         end
 
         def persist_timeline!(timeline_id, tree_state)
-          nil_timeline = base_idx_keys.index_with([]).merge(head: nil).to_json
+          nil_timeline = root_idx_keys.index_with([]).merge(head: nil).to_json
           timeline_from_cache = redis.call('JSON.GET', root_w_namespace, "$.timelines.#{timeline_id}")
+          # -> timeline here will only
           empty_index_response = configuration[:empty_index_response]
           timeline = JSON.parse(timeline_from_cache != empty_index_response ? timeline_from_cache : nil_timeline)
 
-          base_idx_keys.each { |key| timeline[key] = tree_state[key].pluck(:id) + timeline[key.to_s] }
+          # trees commits events stop processes and units will all be an array of ids
+          root_idx_keys.each { |key| timeline[key] = tree_state[key].pluck(:id) + timeline[key.to_s] }
           # trees
           timeline[:trees] = [tree_state.dig(:head), *(timeline[:trees] || [])]
           # Assign head -> most recently created tree version (different from the head of the tree  )
@@ -110,7 +116,7 @@ module CartridgeCore
           redis.call('JSON.SET', root_w_namespace, "$.timelines.#{timeline_id}", timeline.to_json)
         end
 
-        def nil_timeline_state = base_idx_keys.index_with([]).merge(head: nil)
+        def nil_timeline_state = root_idx_keys.index_with([]).merge(head: nil)
 
         def populate_timeline_associations_using_cursor!(timeline, association, load_opts)
           offset, limit = load_opts[:cursor].merge(load_opts[association] || {}).values_at(*%i(offset limit))
@@ -147,7 +153,7 @@ module CartridgeCore
             root_namespace:        :catridgecore,
             default_cursor_limit:  1000,
             default_cursor_offset: 0,
-            full_key_set:          %i(timelines trees) + base_idx_keys,
+            full_key_set:          %i(timelines trees) + root_idx_keys,
             empty_index_response:  '[]',
           }
         end
@@ -156,8 +162,8 @@ module CartridgeCore
           @redis ||= Redis.new
         end
 
-        def base_idx_keys
-          @base_idx_keys ||= %i(definitions commits events)
+        def root_idx_keys
+          @root_idx_keys ||= %i(definitions commits events stop_processes stop_process_units)
         end
 
         ######## REDUNDANT METHODS ############
@@ -196,7 +202,7 @@ module CartridgeCore
           @base_load_opts = {
             only:            [],
             except:          [],
-            eager_load_keys: base_idx_keys.unshift(:trees),
+            eager_load_keys: root_idx_keys.unshift(:tree_states),
             cursor:          {
               limit:  configuration[:default_cursor_limit],
               offset: configuration[:default_cursor_offset],

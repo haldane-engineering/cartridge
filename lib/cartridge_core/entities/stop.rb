@@ -2,7 +2,7 @@
 
 module CartridgeCore
   module Entities
-    STOP_KEYS = %i(applied changeset name route checks balancers index parameters)
+    STOP_KEYS = %i(applied changeset name route checks balancers index parameters spawns_processes)
     Stop = Struct.new(*STOP_KEYS, keyword_init: true) do
       include CartridgeCore::Services::EventBus::Concerns::Propagation
       include CartridgeCore::Cache::Concerns::SelectivePersistence

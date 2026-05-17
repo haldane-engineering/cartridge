@@ -28,7 +28,7 @@
 # }
 module CartridgeCore
   module Entities
-    STATE_KEYS = %i[version current final changes id commits main]
+    STATE_KEYS = %i[version current final changes id commits main stop_processes]
     # Examp
     TreeState = Struct.new(*STATE_KEYS, keyword_init: true) do
       include ::CartridgeCore::Entities::Concerns::TreeState::StateOperations

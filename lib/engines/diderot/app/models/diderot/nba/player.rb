@@ -2,7 +2,7 @@
 
 # == Schema Information
 #
-# Table name: diderot_players
+# Table name: diderot_nba_players
 #
 #  id         :bigint           not null, primary key
 #  first_name :string
@@ -12,7 +12,9 @@
 #  updated_at :datetime         not null
 #
 module Diderot
-  class Player < ApplicationRecord
-    self.table_name = 'diderot_players'
+  module NBA
+    class Player < ApplicationRecord
+      self.table_name = 'diderot_nba_players'
+    end
   end
 end

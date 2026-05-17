@@ -6,16 +6,19 @@ module CartridgeCore
       class Stop
         def self.call(*args) = new(*args).call
 
-        def initialize(tree_state, route)
+        def initialize(tree_state, route, *args)
           @tree_state = tree_state
           @route = route
           @changeset = []
           @errors = []
         end
 
-        def with_changeset_context(&block)
+        def apply_within_changeset_context(&block)
           block.call
           [changeset, errors]
+        # always fail silently
+        rescue StandardError => e
+          errors.push(e)
         end
 
         private
@@ -38,6 +41,11 @@ module CartridgeCore
         end
 
         def capture_error(e) = errors.push(e)
+
+        def route_state_get(key)
+          transform = ->(str) { str.split('::').last.underscore }
+          route.tree_state.get("#{transform.call(route.name)}.#{transform.call(name)}.#{key}")
+        end
       end
     end
   end

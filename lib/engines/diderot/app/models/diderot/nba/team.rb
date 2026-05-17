@@ -1,8 +1,19 @@
 # frozen_string_literal: true
 
+module Diderot
+  module NBA
+    class Team < ApplicationRecord
+      self.table_name = 'diderot_nba_teams'
+
+      has_many :memberships, class_name: 'Diderot::NBA::TeamMembership'
+      has_many :players, through: :memberships
+    end
+  end
+end
+
 # == Schema Information
 #
-# Table name: diderot_teams
+# Table name: diderot_nba_teams
 #
 #  id          :bigint           not null, primary key
 #  logo_url    :string
@@ -12,11 +23,3 @@
 #  updated_at  :datetime         not null
 #  external_id :string
 #
-module Diderot
-  class Team < ApplicationRecord
-    self.table_name = 'diderot_teams'
-
-    has_many :memberships, class_name: 'Diderot::Teams::Membership'
-    has_many :players, through: :memberships
-  end
-end

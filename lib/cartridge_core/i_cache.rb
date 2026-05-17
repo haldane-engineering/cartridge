@@ -66,18 +66,20 @@ module CartridgeCore
     attr_reader :adapter
 
     def setup_initial_timeline!
-      snapshot!(initial_tree_state[:id], initial_tree_state)
-      adapter.load!(initial_tree_state[:id])
+      snapshot!(initial_timeline_tree)
+      adapter.load!(initial_timeline_tree.dig(:id))
     end
 
-    def initial_tree_state
-      @initial_tree_state ||= begin
+    def initial_timeline_tree
+      @initial_timeline_tree ||= begin
         r_timestamp = Time.parse('3rd Feb 1996 10:30pm').to_i # 823383000, My Birthday hahahahaha
         @sample_definition ||= factory(::CartridgeCore::Entities::Definition).build
         sample_route = factory(::CartridgeCore::Entities::Route).build
         real_commit = factory(::CartridgeCore::Entities::TreeStates::Commit).build
         sample_parameter_set = factory(::CartridgeCore::Entities::Trees::Parameter).build
         sample_event = ::CartridgeCore::Entities::EventBus::Event.new(title: :initialized_state, id: r_timestamp)
+        sample_stop_process = factory(::CartridgeCore::Entities::Stops::Process).build
+        sample_stop_process_unit = factory(CartridgeCore::Entities::Stops::Process::Unit).build
         initial_commit = ::CartridgeCore::Entities::TreeStates::RepositoryCommit.new(
           commit: real_commit,
           id: real_commit.id,
@@ -85,25 +87,32 @@ module CartridgeCore
           applied_at: r_timestamp,
         )
         {
-          id:            SecureRandom.hex(8),
-          head:          r_timestamp,
-          definition_id: @sample_definition.id,
-          definitions:   [{ raw: @sample_definition.to_json, id: @sample_definition.id, timestamp: r_timestamp }],
-          trees:         {
+          id:                 SecureRandom.hex(8),
+          head:               r_timestamp,
+          definition_id:      @sample_definition.id,
+          definitions:        [{
+            raw:       @sample_definition.to_json,
+            id:        @sample_definition.id,
+            timestamp: r_timestamp,
+          }],
+          trees:              {
             "#{r_timestamp}": {
-              current:       {},
-              commits:       [initial_commit.persistable_state],
-              head:          initial_commit.id,
-              parameters:    sample_parameter_set.persistable_state,
-              definition_id: @sample_definition.id,
-              routes:        {
+              current:        {},
+              commits:        [initial_commit.persistable_state],
+              stop_processes: [sample_stop_process.persistable_state],
+              head:           initial_commit.id,
+              parameters:     sample_parameter_set.persistable_state,
+              definition_id:  @sample_definition.id,
+              routes:         {
                 # see reference for structure -> should contain stops
                 route_1: sample_route.persistable_state,
               },
             },
           },
-          commits:       [initial_commit.persistable_state],
-          events:        [sample_event.persistable_state],
+          commits:            [initial_commit.persistable_state],
+          events:             [sample_event.persistable_state],
+          stop_processes:     [sample_stop_process.persistable_state],
+          stop_process_units: [sample_stop_process_unit.persistable_state],
         }
       end
     end

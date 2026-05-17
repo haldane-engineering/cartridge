@@ -11,9 +11,11 @@ module CartridgeCore
     Reconciler = Struct.new(*%i(route stops tree_state sequence), keyword_init: true) do
       # @param [Models::Stop] stops a list of stops we want execute concurrently
       # @returns [Models::Stop]
-      def concurrently_execute_with_reconciliation!(actors)
+      def concurrently_execute_with_reconciliation!(actors, blocking = true)
         pool = Concurrent::FixedThreadPool.call(actors.count)
         promises = actors.map { |actor| Concurrent::Promises.future(executor: pool, &actor) }
+        return Concurrent::Promises.zip(*promises).on_fulfilment { pool.shutdown } unless blocking
+
         Concurrent::Promises.zip(*promises).value!
       end
     end

@@ -27,21 +27,13 @@ timelines:
             index: 0
             parameters: []
             name: available_games_retrieval
+            spawns_processes: false
             checks:
               - required: []
                 using: available_games_retrieval/check
             balancers:
               - required: []
                 using: available_games_retrieval/balancer
-          game_replays_retrieval:
-            name: game_replays_retrieval
-            index: 1
-            checks:
-              - required: []
-                using: game_replays_downloader/check
-            balancers:
-              - required: []
-                using: game_replays_downloader/balancer
           game_logs_retrieval:
             index: 2
             name: game_logs_retrieval
@@ -51,6 +43,16 @@ timelines:
             balancers:
               - required: []
                 using: game_logs_retrieval/balancer
+          game_replays_retrieval:
+            name: game_replays_retrieval
+            index: 1
+            spawns_processes: true
+            checks:
+              - required: []
+                using: game_replays_downloader/check
+            balancers:
+              - required: []
+                using: game_replays_downloader/balancer
         reconcilers:
           log_replay_reconciler:
             sequence: [1,2]

@@ -3,9 +3,8 @@
 module Services
   module Core
     class Checker < BaseService
-      class MissingChangesetKeyError < StandardError; end
-      class MissingStepError < StandardError; end
-
+      include ::CartridgeCore::Errors::DynamicPropagation
+      
       def self.apply!(*args)
         new(*args).apply!
       end

@@ -29,3 +29,18 @@ parameter:
         - hello: world
           usable: true
         - testing: this
+process: # for processes
+  id: rp_99
+  stop_name: game_replays_retrieval
+  timeline_id: t_12
+  observable_state_key: game_replays_ids
+  process_unit_ids:
+    - rp_unit_1
+    - rp_unit_2
+unit: # for process_units
+  id: rp_unit_1
+  actual_completion_value: 3400
+  expected_completion_value: 10000
+  metadata: "{}"
+  stop_process_id: rp_99
+  state_entry_value: 121 # in this case this will be the id of the game replay in the db
