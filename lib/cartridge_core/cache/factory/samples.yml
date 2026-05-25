@@ -41,6 +41,17 @@ unit: # for process_units
   id: rp_unit_1
   actual_completion_value: 3400
   expected_completion_value: 10000
+  # tempted to add a processing attribute here
   metadata: "{}"
   stop_process_id: rp_99
   state_entry_value: 121 # in this case this will be the id of the game replay in the db
+scheduled_execution:
+  id: ssid_1
+  timeline_id: t_1
+  status: queued
+  serialized_context:
+    route: route_1
+    stop: stop_1
+    parameters:
+      hello: world
+  executes_at: '2026-04-18T18:00:00Z'

@@ -29,6 +29,8 @@ module Providers
 
       def generate_highlight_fragments(events, fragment_class)
         events = events.select(&->(event) { highlightable_event_types.include?(event['event_type']) })
+        # This is not a correct implementation - we should use the time diff between the game start time
+        # and the time in the execution context
         prefix_padding = ->(time_string, gap) { Time.zone.parse(time_string) - gap }
         affix_padding = ->(time_string, gap) { Time.zone.parse(time_string) + gap }
         events.map do |event|

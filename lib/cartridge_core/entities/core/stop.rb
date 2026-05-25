@@ -43,8 +43,20 @@ module CartridgeCore
         def capture_error(e) = errors.push(e)
 
         def route_state_get(key)
+          # TODO: I do not need to split this key into the key parts
+          route.timeline.reload!
           transform = ->(str) { str.split('::').last.underscore }
           route.tree_state.get("#{transform.call(route.name)}.#{transform.call(name)}.#{key}")
+        end
+
+        def state_get(key)
+          # This method is useful for fetching state values which have been populated by other routes.
+          # this is done after complete route traversal. For example in the poc, at the beginning of the
+          # highlight composition route, it fetches the downloaded game ids from the previous route (source population).
+          # but during it's own execution (which is pre-commital) it would fetch from it's internal route state using
+          # #route_state_get
+          route.timeline.reload!
+          route.timeline.tree_state.get(key)
         end
       end
     end

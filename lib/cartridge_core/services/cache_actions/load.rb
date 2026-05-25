@@ -23,7 +23,7 @@ module CartridgeCore
         private
 
         def assign_timeline_attributes(tl_state, tree)
-          # build the rest of the timeline associations (definitions, events, commits, trees, id, head)
+          # build the rest of the timeline associations (definitions, events, commits, trees, id, head, stop_pro)
           tl_state.keys.each do |tl_attribute|
             attribute_value = tl_state[tl_attribute]
             next timeline.send(:"#{tl_attribute_key}=", attribute_value) unless attribute_value.is_a?(Array)
@@ -35,6 +35,7 @@ module CartridgeCore
           end
         end
 
+        # TODO: Move stop processes and scheduled executions to root folder
         def entity_for(key) = "::CartridgeCore::Entities::#{key.camelize.singularize}".constantize
       end
     end

@@ -79,7 +79,8 @@ module CartridgeCore
         sample_parameter_set = factory(::CartridgeCore::Entities::Trees::Parameter).build
         sample_event = ::CartridgeCore::Entities::EventBus::Event.new(title: :initialized_state, id: r_timestamp)
         sample_stop_process = factory(::CartridgeCore::Entities::Stops::Process).build
-        sample_stop_process_unit = factory(CartridgeCore::Entities::Stops::Process::Unit).build
+        sample_stop_process_unit = factory(::CartridgeCore::Entities::Stops::Process::Unit).build
+        sample_scheduled_execution = factory(::CartridgeCore::Entities::Stops::ScheduledExecution).build
         initial_commit = ::CartridgeCore::Entities::TreeStates::RepositoryCommit.new(
           commit: real_commit,
           id: real_commit.id,
@@ -87,15 +88,15 @@ module CartridgeCore
           applied_at: r_timestamp,
         )
         {
-          id:                 SecureRandom.hex(8),
-          head:               r_timestamp,
-          definition_id:      @sample_definition.id,
-          definitions:        [{
+          id:                   SecureRandom.hex(8),
+          head:                 r_timestamp,
+          definition_id:        @sample_definition.id,
+          definitions:          [{
             raw:       @sample_definition.to_json,
             id:        @sample_definition.id,
             timestamp: r_timestamp,
           }],
-          trees:              {
+          trees:                {
             "#{r_timestamp}": {
               current:        {},
               commits:        [initial_commit.persistable_state],
@@ -109,10 +110,11 @@ module CartridgeCore
               },
             },
           },
-          commits:            [initial_commit.persistable_state],
-          events:             [sample_event.persistable_state],
-          stop_processes:     [sample_stop_process.persistable_state],
-          stop_process_units: [sample_stop_process_unit.persistable_state],
+          commits:              [initial_commit.persistable_state],
+          events:               [sample_event.persistable_state],
+          stop_processes:       [sample_stop_process.persistable_state],
+          stop_process_units:   [sample_stop_process_unit.persistable_state],
+          scheduled_executions: [sample_scheduled_execution],
         }
       end
     end

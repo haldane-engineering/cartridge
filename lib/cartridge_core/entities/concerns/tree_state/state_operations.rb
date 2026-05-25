@@ -19,7 +19,10 @@ module CartridgeCore
             end
             # looks something like this [["st_available_games_retrieval", "ro_source_population"], ""]
             full_key_with_commit = entry_for(['$', *accessors.reverse, leaf_field].join('.'))
-            current.dig(entry_for(full_key_with_commit).first) if full_key_with_commit
+            if full_key_with_commit
+              k_value = current.dig(entry_for(full_key_with_commit).first)
+              JSON.parse(k_value) if k_value
+            end
           end
 
           # @param [CartridgeCore::Entities::Commit] commit the commit to be applied

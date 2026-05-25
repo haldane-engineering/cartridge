@@ -65,7 +65,5 @@ module CartridgeCore
         entry_index.map { |index| timeline.routes[index] }
       end
     end
-
-    class Errors; def self.list = []; end
   end
 end

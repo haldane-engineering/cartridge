@@ -18,8 +18,13 @@ module CartridgeCore
       id
       tree_state
       definition_id
+      scheduled_execution_id
       head
+      execution_state
       context
+      scheduled_executions
+      stop_processes
+      stop_process_units
     )
 
     Tree = Struct.new(*TREE_KEYS, keyword_init: true) do

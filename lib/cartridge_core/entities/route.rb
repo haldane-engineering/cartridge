@@ -26,6 +26,9 @@ module CartridgeCore
         ::CartridgeCore::Services::Routes::TraversalService.call(self)
       end
 
+      def preceeding = timeline.routes[index - 1]
+      def next = timeline.routes[index + 1]
+
       alias_method :parent, :timeline
     end
   end

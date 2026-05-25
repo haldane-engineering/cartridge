@@ -13,6 +13,7 @@ module CartridgeCore
         @timeline_key = timeline_key
         @opts = default_builder_opts.merge(options)
         @cache = CartridgeCore::ICache.new
+        @execution = opts.dig(:scheduled_execution)
       end
 
       def build
@@ -31,10 +32,13 @@ module CartridgeCore
 
       private
 
-      attr_reader(*%i(timeline_key opts cache))
+      attr_reader(*%i(timeline_key opts cache execution))
 
       def default_builder_opts
-        @default_builder_opts ||= { parameters: {} }
+        @default_builder_opts ||= {
+          parameters:          {},
+          scheduled_execution: ::CartridgeCore::Entities::Timelines::ScheduleExecution.new,
+        }
       end
 
       def preexisting_definitions
@@ -45,7 +49,7 @@ module CartridgeCore
       end
 
       def build_and_assign_tree_routes!(tree, definition)
-        tree.routes = definition.dig(:routes).keys.map do |r_key|
+        tree.routes = execution.filter_routes(definition.dig(:routes)).keys.map do |r_key|
           # probably need to assign parameters someone here - confirm during run
           route_class = ::CartridgeCore::Entities::Route
           state_validation_mod = ::CartridgeCore::Entities::Concerns::StateIntegrityEnforcement
@@ -62,7 +66,7 @@ module CartridgeCore
           # build stops
           path = [:routes, r_key, :stops]
           confirm_executable_files!(tree.using_namespace(definition.dig(*path).keys, group: path.join('/')))
-          route.stops = definition.dig(:routes, r_key, :stops).keys.map do |s_key|
+          route.stops = execution.filter_stops(definition.dig(:routes, r_key, :stops)).keys.map do |s_key|
             stop = CartridgeCore::Entities::Stop.new(**definition.dig(:routes, r_key, :stops, s_key).merge(route:))
             stop.checks, stop.balancers = build_guard_classes_for_stop(stop, tree, definition, state_validation_mod)
             stop
@@ -99,7 +103,11 @@ module CartridgeCore
         %i(checks balancers).map(&build_classes)
       end
 
-      def assign_timeline_context!(tree) = tree.context = CartridgeCore::Entities::Trees::Context.new(**opts)
+      def assign_timeline_context!(tree)
+        tree.context = CartridgeCore::Entities::Trees::Context.new(
+          **opts.merge(execution_context: execution.serialized_context || {}),
+        )
+      end
 
       def confirm_executable_files!(f_names)
         f_names.each { |f| halt!(:missing_source_file_error) unless defined?("::#{f}".camelize) }
