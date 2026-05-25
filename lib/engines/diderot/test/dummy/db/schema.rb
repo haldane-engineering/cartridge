@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_05_16_233913) do
+ActiveRecord::Schema.define(version: 2026_05_24_150836) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -40,7 +40,9 @@ ActiveRecord::Schema.define(version: 2026_05_16_233913) do
     t.bigint "away_team_id"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.integer "game_log_id"
     t.index ["away_team_id"], name: "index_diderot_nba_games_on_away_team_id"
+    t.index ["game_log_id"], name: "index_diderot_nba_games_on_game_log_id"
     t.index ["home_team_id"], name: "index_diderot_nba_games_on_home_team_id"
   end
 
@@ -75,6 +77,7 @@ ActiveRecord::Schema.define(version: 2026_05_16_233913) do
   end
 
   add_foreign_key "diderot_nba_game_logs", "diderot_nba_games", column: "game_id"
+  add_foreign_key "diderot_nba_games", "diderot_nba_game_logs", column: "game_log_id", on_delete: :nullify
   add_foreign_key "diderot_nba_games", "diderot_nba_teams", column: "away_team_id"
   add_foreign_key "diderot_nba_games", "diderot_nba_teams", column: "home_team_id"
   add_foreign_key "diderot_nba_team_memberships", "diderot_nba_players", column: "player_id"

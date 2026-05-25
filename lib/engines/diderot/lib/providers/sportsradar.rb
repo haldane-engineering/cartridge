@@ -3,8 +3,8 @@
 module Providers
   module SportsRadar
     class NBA
-      CONFIG_KEYS = %i(team_class player_class team_membership_class game_class settings)
-
+      CONFIG_KEYS = %i(team_class player_class team_membership_class game_class settings timezone).freeze
+      HIGHLIGHTABLE_EVENT_TYPES = %w(twopointmade threepointmade).freeze
       def fetch_teams
         response = exec_request(URI("#{configuration.settings.dig(:base_url)}/league/teams.json"))
         JSON.parse(response)
@@ -27,6 +27,19 @@ module Providers
         JSON.parse(response)
       end
 
+      def generate_highlight_fragments(events, fragment_class)
+        events = events.select(&->(event) { highlightable_event_types.include?(event['event_type']) })
+        prefix_padding = ->(time_string, gap) { Time.zone.parse(time_string) - gap }
+        affix_padding = ->(time_string, gap) { Time.zone.parse(time_string) + gap }
+        events.map do |event|
+          fragment_class.new(
+            title: event['description'],
+            start: prefix_padding.call(event['wall_clock'], configuration.events_prefix_gap.minutes),
+            end: affix_padding.call(event['wall_clock'], configuration.events_suffix_gap.minutes),
+          )
+        end
+      end
+
       def formatter = Formatter.new
 
       def configuration
@@ -34,10 +47,11 @@ module Providers
           team_class: ::Diderot::NBA::Team,
           player_class: ::Diderot::NBA::Player,
           team_membership_class: ::Diderot::NBA::TeamMembership,
-          game_class: ::Dideror::NBA::Game,
+          game_class: ::Dideror::NBA::Game.includes(*%i(home_team away_team)),
           game_log_class: ::Diderot::NBA::GameLog,
           persistable_game_log_event_types: %w(lineupchange),
           settings:,
+          timezone: 'US/Eastern',
         )
       end
 
@@ -70,6 +84,8 @@ module Providers
           min_team_membership_count: 12,
         }
       end
+
+      def highlightable_event_types = HIGHLIGHTABLE_EVENT_TYPES
 
       class Formatter
         def team_attributes_from_json(team_json)
