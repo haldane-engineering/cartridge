@@ -16,9 +16,10 @@ module CartridgeCore
       commits
       trees
       id
+      key
       tree_state
       definition_id
-      scheduled_execution_id
+      scheduled_execution_memberships
       head
       execution_state
       context

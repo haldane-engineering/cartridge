@@ -31,7 +31,7 @@ module CartridgeCore
         end
 
         module ScheduleExecution
-          def schedule_execution!(context, at:, halt_timeline:)
+          def schedule_timeline_execution!(context, at:, halt_timeline:)
             # TODO: include leaf name as an add on module
             s_exec = ::CartridgeCore::Entities::Stops::ScheduledExecution.new(
               id: SecureRandom.hex(8),

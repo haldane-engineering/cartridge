@@ -10,7 +10,7 @@ module CartridgeCore
 
         # I3ndex doc looks like this
         # timelines: {}, events: {}, trees: {}, commits: {}, resolver_processes: {}, resolver_process_units
-        def initialize(root)
+        def initialize(root = :cartridge)
           @statements = []
           @root_w_namespace = prefix_root(root) # could this include namespace? msaservices:cartridge
         end
@@ -67,6 +67,13 @@ module CartridgeCore
             JSON.parse(result) if result
           end
           query.keys.zip(result_set).to_h
+        end
+
+        def root_get(key, klass)
+          # Assumption here is that every
+          index_resp = redis.call('JSON.GET', root_w_namespace, '$') || empty_index_response
+          index_resp = JSON.parse(index_resp)
+          index_resp.map(&->(obj) { klass.new(**obj) })
         end
 
         private
@@ -163,7 +170,21 @@ module CartridgeCore
         end
 
         def root_idx_keys
-          @root_idx_keys ||= %i(definitions commits events stop_processes stop_process_units)
+          @root_idx_keys ||= %i(
+            definitions commits events stop_processes stop_process_units scheduled_executions
+          )
+        end
+
+        def base_load_opts
+          @base_load_opts = {
+            only:            [],
+            except:          [],
+            eager_load_keys: root_idx_keys.unshift(:tree_states),
+            cursor:          {
+              limit:  configuration[:default_cursor_limit],
+              offset: configuration[:default_cursor_offset],
+            },
+          }
         end
 
         ######## REDUNDANT METHODS ############
@@ -196,18 +217,6 @@ module CartridgeCore
         end
 
         def flatten_with_parents(parents)
-        end
-
-        def base_load_opts
-          @base_load_opts = {
-            only:            [],
-            except:          [],
-            eager_load_keys: root_idx_keys.unshift(:tree_states),
-            cursor:          {
-              limit:  configuration[:default_cursor_limit],
-              offset: configuration[:default_cursor_offset],
-            },
-          }
         end
       end
     end

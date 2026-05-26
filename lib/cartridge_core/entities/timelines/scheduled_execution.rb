@@ -5,6 +5,7 @@ module CartridgeCore
     module Timelines
       ScheduledExecution = Struct.new(*%i(id timeline_id status serialized_context executes_at)) do
         include CartridgeCore::Cache::Concerns::SelectivePersistence
+        index(:scheduled_executions)
 
         def filter_routes(routes)
           return routes unless serialized_context

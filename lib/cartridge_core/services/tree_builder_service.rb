@@ -26,6 +26,7 @@ module CartridgeCore
         end
         definition_hash = Digest::MD5.hexdigest(definition.to_json)
         _, tl_state = cache.timeline_state_for(definition_hash)
+        tl_state = tl_state.merge(scheduled_executions: [*(tl_state.dig(:scheduled_executions) || []), execution.id])
         # load the state into the timeline instance
         ::CatridgeCore::Services::CacheActions::Load.apply!(tree, tl_state)
       end
