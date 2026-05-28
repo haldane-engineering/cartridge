@@ -21,9 +21,11 @@ Gem::Specification.new do |spec|
   spec.files = Dir['{app,config,db,lib}/**/*', 'MIT-LICENSE', 'Rakefile', 'README.md']
 
   spec.add_dependency 'annotate', '~> 3.2.0'
+  spec.add_dependency 'capybara', '~>3.1.0'
   spec.add_dependency 'nokogiri', '~> 1.19', '>= 1.19.3'
   spec.add_dependency 'open3', '~> 0.2.1'
   spec.add_dependency 'pg', '~> 1.6'
   spec.add_dependency 'pry', '~> 0.14.2'
   spec.add_dependency 'rails', '~> 6.1.7', '>= 6.1.7.10'
+  spec.add_dependency 'selenium-webdriver', '4.44.0'
 end

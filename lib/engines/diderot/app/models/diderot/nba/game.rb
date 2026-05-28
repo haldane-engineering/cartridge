@@ -11,6 +11,8 @@ module Diderot
       def full_identifier
         raise NotImplementedError
       end
+
+      def participants = [away_team, home_team]
     end
   end
 end
