@@ -48,7 +48,7 @@ module Diderot
               eval "$($BREW_PATH/bin/brew shellenv)"
               )
             end
-            system("brew install #{bin}")
+            system("HOMEBREW_NO_AUTO_UPDATE=1 brew install #{bin}")
           end
           Open3.capture3(cmd)
         end
