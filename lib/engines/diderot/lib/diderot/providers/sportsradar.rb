@@ -14,6 +14,7 @@ module Diderot
           images_provider
           decorators
         ).freeze
+        DISTRIBUTION_CHANNELS = %i(youtube).index_with(&:itself)
         HIGHLIGHTABLE_EVENT_TYPES = %w(twopointmade threepointmade).freeze
 
         # rubocop:disable Style/ClassMethodsDefinitions
@@ -101,6 +102,14 @@ module Diderot
           )
         end
 
+        def distribution_channels = DISTRIBUTION_CHANNELS.keys
+
+        def distribution_parameters_from_game(game, channel:)
+          return DistributionParameters::Youtube.extract(game) if youtube_distribution?(channel)
+
+          raise NotImplementedError
+        end
+
         delegate(*CONFIG_KEYS, to: :configuration)
 
         private
@@ -118,6 +127,8 @@ module Diderot
             request['Content-Type'] = 'application/json'
           end
         end
+
+        def youtube_distribution?(channel) = channel == :youtube
 
         def settings
           @settings ||= {
@@ -165,6 +176,7 @@ module Diderot
               home_team_id: internal_team_id_for(game_json.dig(*%w(home id))),
               away_team_id: internal_team_id_for(game_json.dig(*%w(away id))),
               league_id: NBA.league.id,
+              metadata: { special_context_title: 'Full Highlights' },
             )
           end
 
@@ -184,6 +196,36 @@ module Diderot
         end
 
         ProviderConfiguration = Struct.new(*CONFIG_KEYS, keyword_init: true)
+
+        module DistributionParameters
+          YT_KEYS = %i(file_path title description category keywords privacy_status).freeze
+          Youtube = Struct.new(*YT_KEYS, keyword_init: true) do
+            class << self
+              def game_specific_keys = %i(file_path title description)
+              def league_specific_keys = YT_KEYS - game_specific_keys
+              def name = :youtube
+
+              def title_components(game)
+                [
+                  game.participants.map(&:full_name).join(' vs '),
+                  game.meta('special_context.title'), # e.g NBA finals will have special context 'NBA Finals Game 1'
+                  "| #{game.scheduled_at.strftime("%B %-d, %Y")}",
+                ].join(', ')
+              end
+
+              def extract!(game)
+                new(**league_specific_keys.index_with(&->(key) {
+                  game.league.meta("distributions.youtube.#{key}")
+                }).merge(
+                  **game_specific_keys.index_with(&->(key) { game.meta("distributions.youtube.#{key}") }),
+                  file_path: game.output_video_path,
+                  # e.g San Antonio Spurs vs New York Knicks Full Game 2 Highlights - June 5, 2026 | NBA Finals
+                  title: title_components(game),
+                ))
+              end
+            end
+          end
+        end
       end
     end
   end

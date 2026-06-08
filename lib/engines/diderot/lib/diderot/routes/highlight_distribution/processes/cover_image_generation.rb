@@ -4,12 +4,14 @@ module Diderot
   module Routes
     module HighlightDistribution
       module Processes
-        class CoverImageGeneration < Diderot::Routes::ApplicableStop
+        class CoverImageGeneration
           include Diderot::Concerns::CommandTools::Python
+
+          def self.spawn!(*args) = new.spawn!(*args)
 
           # @param [NBA::Game] game
           # @param [Providers::Provider]
-          def call(game, provider)
+          def spawn!(game, provider)
             # When we get games from any source the expectation is that the provider is able to
             # suggest two players from the 'warring' teams -> These two players should be of relevance to
             # the viewership and the game in context (players with the most impact (activity score) -e.g
@@ -52,7 +54,7 @@ module Diderot
               GameParticipant.new(ticker: team.alias, name: team.full_name, hero_image_base64: image64, points_scored:)
             })
             image_generator_args = { participants:, game_context: }
-            _, err, status = bin_exec(:cover_image_generator, JSON.stringify(image_generator_args))
+            _, err, status = bin_exec(:cover_image_generator, image_generator_args.to_json)
             halt!(:cover_image_generation_error, err) unless status
           end
 

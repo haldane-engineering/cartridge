@@ -53,6 +53,7 @@ end
 #  away_timezone         :string
 #  broadcast_network     :string
 #  home_timezeone        :string
+#  metadata              :jsonb
 #  scheduled_at          :datetime
 #  season_type           :string
 #  season_year           :bigint

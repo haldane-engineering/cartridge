@@ -13,6 +13,7 @@ end
 #
 #  id          :bigint           not null, primary key
 #  logo_base64 :text
+#  metadata    :jsonb
 #  name        :string
 #  ticker      :string
 #  type        :string
