@@ -16,10 +16,12 @@ end
 # Table name: diderot_nba_teams
 #
 #  id          :bigint           not null, primary key
+#  alias       :string
 #  logo_url    :string
 #  market      :string
 #  name        :string
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
 #  external_id :string
+#  league_id   :integer
 #

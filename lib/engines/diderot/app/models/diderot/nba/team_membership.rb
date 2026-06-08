@@ -22,6 +22,7 @@ end
 #  role       :string
 #  created_at :datetime         not null
 #  updated_at :datetime         not null
+#  league_id  :integer
 #  player_id  :bigint
 #  team_id    :bigint
 #

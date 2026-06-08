@@ -4,8 +4,24 @@ module Diderot
   module Providers
     module SportsRadar
       class NBA
-        CONFIG_KEYS = %i(team_class player_class team_membership_class game_class settings timezone).freeze
+        CONFIG_KEYS = %i(
+          team_class
+          player_class
+          team_membership_class
+          game_class
+          settings
+          timezone
+          images_provider
+          decorators
+        ).freeze
         HIGHLIGHTABLE_EVENT_TYPES = %w(twopointmade threepointmade).freeze
+
+        # rubocop:disable Style/ClassMethodsDefinitions
+        def self.league
+          @league ||= ::Diderot::Leagues::Nba.first
+        end
+        # rubocop:enable Style/ClassMethodsDefinitions
+
         def fetch_teams
           response = exec_request(URI("#{configuration.settings.dig(:base_url)}/league/teams.json"))
           JSON.parse(response)
@@ -28,6 +44,11 @@ module Diderot
           JSON.parse(response)
         end
 
+        def fetch_game_box_score(game)
+          response = exec_request(URI("#{configuration.settings.dig(:base_url)}/games/#{game.external_id}/boxscore.json"))
+          JSON.parse(response)
+        end
+
         def generate_highlight_fragments(events, fragment_class)
           events = events.select(&->(event) { highlightable_event_types.include?(event['event_type']) })
           # This is not a correct implementation - we should use the time diff between the game start time
@@ -43,6 +64,25 @@ module Diderot
           end
         end
 
+        # @param [Diderot::Nba::Game] game - well, the game in context
+        # @return [Array<String>] the sportsradar id of the highest scorers
+        def infer_most_impactful_players(game)
+          # Again this is a naive implementation of this algorithm (IMHO). We're (simply) getting the player
+          # who's scored the most points. I expounded on a better approach in the cover image generation process.
+          # Anyway, we've been proovided the (scoring, assists and rebound) leaders by sportsradar in the boxscore attribute.
+          # see https://developer.sportradar.com/basketball/reference/nba-game-boxscore
+          point_leaders = game.game_log.box_score.slice(*%w(away home)).values.pluck(%w(leaders points))
+          point_leaders.flatten.pluck('id') # ID from sportsradar
+        end
+
+        # @param [Diderot::Nba::Game] game (in context)
+        # @param [Diderot::Nba::Team] team (in context)
+        def infer_points_scored(game, team)
+          match_team = ->(team_box_score) { team_box_score['id'] == team.external_id }
+          # game.participants returns the away team first.
+          game.game_log.box_score.slice(*%w(away home)).values(&match_team)['points']
+        end
+
         def formatter = Formatter.new
 
         def configuration
@@ -52,9 +92,12 @@ module Diderot
             team_membership_class: ::Diderot::NBA::TeamMembership,
             game_class: ::Dideror::NBA::Game.includes(*%i(home_team away_team)),
             game_log_class: ::Diderot::NBA::GameLog,
-            persistable_game_log_event_types: %w(lineupchange),
             settings:,
             timezone: 'US/Eastern',
+            images_provider: ::Diderot::Providers::Images::SportsDB.new,
+            decorators: {
+              team: Decorators::NBA::TeamDecorator,
+            },
           )
         end
 
@@ -91,16 +134,22 @@ module Diderot
         def highlightable_event_types = HIGHLIGHTABLE_EVENT_TYPES
 
         class Formatter
+          def box_score_attributes_from_json(box_score_json)
+            persistable_keys = %w(name market id scoring leaders assists alias points)
+            team_box_scores = box_score_json.slice(*%w(home away))
+            team_box_scores.entries.map(&->((k, v)) { [k, v.slice(*persistable_keys)] }).to_h
+          end
+
           def team_attributes_from_json(team_json)
             external_id = team_json.delete(configuration.settings.dig(:identifier_key))
             persistable_json = team_json.slice(*::Diderot::NBA::Team.attribute_names).compact
-            persistable_json.merge(external_id:)
+            persistable_json.merge(external_id:, league_id: NBA.league.id)
           end
 
           def player_attributes_from_json(player_json)
             external_id = player_json.delete(configuration.settings.dig(:identifier_key))
             persistable_json = player_json.slice(*::Diderot::NBA::Player.attribute_names).compact
-            persistable_json.merge(external_id:)
+            persistable_json.merge(external_id:, league_id: NBA.league.id)
           end
 
           def game_attributes_from_json(game_json)
@@ -115,6 +164,7 @@ module Diderot
               venue_name: game_json.dig(*%w(venue name)),
               home_team_id: internal_team_id_for(game_json.dig(*%w(home id))),
               away_team_id: internal_team_id_for(game_json.dig(*%w(away id))),
+              league_id: NBA.league.id,
             )
           end
 

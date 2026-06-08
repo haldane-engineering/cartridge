@@ -44,8 +44,9 @@ module Diderot
               m
               File.write(manifest_path, manifest_txt)
               f_path = "#{dir_path}/#{game.full_identifier}"
-              output, _, status = py_exec("fmpeg -f concat -safe 0 -i #{manifest_path} -map 0 -c copy #{f_path}.mp4")
+              output, _, status = py_exec("ffmpeg -f concat -safe 0 -i #{manifest_path} -map 0 -c copy #{f_path}.mp4")
               # TODO: Include error propagation
+              # send to s3 at this point: TODO
               halt!(:fragment_composition_error, output) unless status
             end
           end

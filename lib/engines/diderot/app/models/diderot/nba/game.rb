@@ -7,12 +7,40 @@ module Diderot
 
       belongs_to :home_team, class_name: 'Diderot::NBA::Team'
       belongs_to :away_team, class_name: 'Diderot::NBA::Team'
+      belongs_to :league, class_name: 'Diderot::Leagues::Nba'
+
+      has_one :game_log, class_name: 'Diderot::Nba::GameLog', dependent: :nullify
 
       def full_identifier
         raise NotImplementedError
       end
 
       def participants = [away_team, home_team]
+
+      # ################## MOVE ALL OF THESE TO A DECORATOR
+      # @param [String] salt required for multiple iteration, idea here is that
+      # videos should be saved in different folders -> I guess a more sensible option
+      # will be the hash_commit as the folder name
+      def assets_directory(salt = nil)
+        game_digest = Digest::SHA256.hexdigest(log.game_id)
+        salt ? game_digest + "_#{salt}" : game_digest
+      end
+
+      def full_identifier
+        raise NotImplementedError
+      end
+
+      # @param [String] context - search context for the video (local returns the local
+      # path, :aws returns the s3 path)
+      #
+      def output_video_path(context: :local, salt: nil)
+        case context
+        when :local
+          assets_directory(salt) + "/#{full_identifier}"
+        else
+          raise NotImplementedEerror
+        end
+      end
     end
   end
 end
@@ -37,6 +65,7 @@ end
 #  external_reference_id :string
 #  game_log_id           :integer
 #  home_team_id          :bigint
+#  league_id             :integer
 #
 # Indexes
 #

@@ -18,6 +18,11 @@ module Diderot
           end
           Open3.capture3(cmd)
         end
+
+        def bin_exec(cmd, args)
+          cmd_path = Rails.root.join("bin/py/#{cmd}.py")
+          Open3.capture3("#{cmd_path} #{args}")
+        end
       end
 
       module Brew

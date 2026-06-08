@@ -13,12 +13,14 @@ end
 # Table name: diderot_nba_game_logs
 #
 #  id          :bigint           not null, primary key
+#  box_score   :jsonb
 #  raw_json    :jsonb
 #  status      :string
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
 #  external_id :string
 #  game_id     :bigint
+#  league_id   :integer
 #
 # Indexes
 #

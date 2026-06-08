@@ -11,12 +11,19 @@ module Diderot
             # by the preceeding step (AvailableGamesRetrieval)
             available_game_ids = route_state_get(:available_game_ids)
             provider.game_class.where(id: available_game_ids).find_each do |game|
-              provider.game_log_class.create!(provider.formatter.game_log_attributes_from_json(
-                provider.fetch_game_play_by_play(game),
-                game,
-              ))
+              ActiveRecord::Base.transaction do
+                game_pbp = provider.fetch_game_play_by_play(game)
+                game_log_attributes = provider.formatter.game_log_attributes_from_json(game_pbp)
+                game_box_score = provider.fetch_game_box_score(game)
+                box_score_attributes = provider.formatter.box_score_attributes_from_json(game_box_score)
+                game_log = provider.game_log_class.create!(**game_log_attributes.merge(box_score: box_score_attributes))
+                game.update(game_log_id: game_log.id)
+              end
             end
-            changeset_add(key: :game_log_ids, value: provider.game_log_class.where(game_id: available_game_ids).ids)
+            changeset_add(
+              key: :game_log_ids,
+              value: provider.game_log_class.where(game_id: available_game_ids).ids,
+            )
           end
         end
       end

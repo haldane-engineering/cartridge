@@ -23,7 +23,15 @@ module Diderot
                 **provider.formatter.team_attributes_from_json(team_json),
               ))
             end
-            changeset_add(key: :team_ids, value: provider.team_class.all.ids)
+            teams = provider.team_class.all
+            # Populate the logos and player images
+            spawn_processes!(
+              [-> {
+                Processes::TeamMembershipsProfilePopulationProcess.spawn!(teams, provider)
+              }],
+              blocking: false,
+            )
+            changeset_add(key: :team_ids, value: teams.ids)
           end
 
           private

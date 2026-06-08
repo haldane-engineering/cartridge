@@ -10,10 +10,20 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_05_24_150836) do
+ActiveRecord::Schema.define(version: 2026_06_08_035545) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
+
+  create_table "diderot_leagues", force: :cascade do |t|
+    t.string "name"
+    t.string "ticker"
+    t.text "logo_base64"
+    t.string "type"
+    t.datetime "created_at", precision: 6, null: false
+    t.datetime "updated_at", precision: 6, null: false
+    t.index ["type"], name: "index_diderot_leagues_on_type"
+  end
 
   create_table "diderot_nba_game_logs", force: :cascade do |t|
     t.string "external_id"
@@ -22,6 +32,8 @@ ActiveRecord::Schema.define(version: 2026_05_24_150836) do
     t.bigint "game_id"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.jsonb "box_score"
+    t.integer "league_id"
     t.index ["game_id"], name: "index_diderot_nba_game_logs_on_game_id"
   end
 
@@ -41,6 +53,7 @@ ActiveRecord::Schema.define(version: 2026_05_24_150836) do
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
     t.integer "game_log_id"
+    t.integer "league_id"
     t.index ["away_team_id"], name: "index_diderot_nba_games_on_away_team_id"
     t.index ["game_log_id"], name: "index_diderot_nba_games_on_game_log_id"
     t.index ["home_team_id"], name: "index_diderot_nba_games_on_home_team_id"
@@ -52,6 +65,8 @@ ActiveRecord::Schema.define(version: 2026_05_24_150836) do
     t.string "photo_url"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.integer "external_id"
+    t.integer "league_id"
   end
 
   create_table "diderot_nba_team_memberships", force: :cascade do |t|
@@ -63,6 +78,7 @@ ActiveRecord::Schema.define(version: 2026_05_24_150836) do
     t.string "photo_url"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.integer "league_id"
     t.index ["player_id"], name: "index_diderot_nba_team_memberships_on_player_id"
     t.index ["team_id"], name: "index_diderot_nba_team_memberships_on_team_id"
   end
@@ -74,6 +90,8 @@ ActiveRecord::Schema.define(version: 2026_05_24_150836) do
     t.string "logo_url"
     t.datetime "created_at", precision: 6, null: false
     t.datetime "updated_at", precision: 6, null: false
+    t.integer "league_id"
+    t.string "alias"
   end
 
   add_foreign_key "diderot_nba_game_logs", "diderot_nba_games", column: "game_id"
