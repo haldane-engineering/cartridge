@@ -1,0 +1,57 @@
+definition:
+  raw: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  id: def_v1_auth
+  timestamp: '2026-04-18T18:00:00Z'
+route:
+  name: route_auth_main
+  tree_state:
+    current:
+      max_connections: 500
+    commits: []
+stop:
+  name: stop_1
+  applied: true
+  changeset: []
+  context:
+    parameters:
+      retry: true
+commit:
+  id: c_99
+  changeset:
+    - op: add
+      path: /max_connections
+      value: 500
+  contains: []
+parameter:
+  raw:
+    route_auth_main:
+      stop_1:
+        - hello: world
+          usable: true
+        - testing: this
+process: # for processes
+  id: rp_99
+  stop_name: game_replays_retrieval
+  timeline_id: t_12
+  observable_state_key: game_replays_ids
+  process_unit_ids:
+    - rp_unit_1
+    - rp_unit_2
+unit: # for process_units
+  id: rp_unit_1
+  actual_completion_value: 3400
+  expected_completion_value: 10000
+  # tempted to add a processing attribute here
+  metadata: "{}"
+  stop_process_id: rp_99
+  state_entry_value: 121 # in this case this will be the id of the game replay in the db
+scheduled_execution:
+  id: ssid_1
+  timeline_id: t_1
+  status: queued
+  serialized_context:
+    route: route_1
+    stop: stop_1
+    parameters:
+      hello: world
+  executes_at: '2026-04-18T18:00:00Z'

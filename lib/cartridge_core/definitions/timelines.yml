@@ -1,0 +1,72 @@
+timelines:
+  highlight_generation:
+    key: highlight_generation
+    description: Generate NBA highlights
+    sequence: [0, [1, 2]]
+    strategy: merge
+    reconcilers:
+        log_replay_reconciler:
+          sequence: [1,2]
+    routes:
+      source_population:
+        name: source_population
+        index: 0
+        description: 
+          Get all the games played and download their videos + logs \
+          expectation is to have all the videos sent to S3 and move to 
+          the next step
+        sequence: [0, [1,2]]
+        checks:
+          - required: [] #changeset here should contain the expected keys
+            using: [global/balancer]
+        balancers:
+          - required: []
+            using: source_population/balancer
+        algorithm: merge
+        stops:
+          available_games_retrieval:
+            index: 0
+            parameters: []
+            name: available_games_retrieval
+            spawns_processes: false
+            checks:
+              - required: []
+                using: available_games_retrieval/check
+            balancers:
+              - required: []
+                using: available_games_retrieval/balancer
+          game_logs_retrieval:
+            index: 2
+            name: game_logs_retrieval
+            checks:
+              - required: []
+                using: game_logs_retrieval/check
+            balancers:
+              - required: []
+                using: game_logs_retrieval/balancer
+          game_replays_retrieval:
+            name: game_replays_retrieval
+            index: 1
+            spawns_processes: true
+            checks:
+              - required: []
+                using: game_replays_downloader/check
+            balancers:
+              - required: []
+                using: game_replays_downloader/balancer
+        reconcilers:
+          log_replay_reconciler:
+            sequence: [1,2]
+      # log_based_replay_slicing:
+      #   name: Log Based Game replay slicing
+      #   loops: true
+      #   description: 
+      #     For each of the games that has it's log and video downloaded, slice the replay
+      #     into chunks and store it in a folder in s3
+      #   checks: 
+      #     - required: []
+      #       using: log_based_replay_slicing/check
+      #   balancers:
+      #     - required: []
+      #       using: log_based_replay_slicing/balancer
+      #   sequence: []          
