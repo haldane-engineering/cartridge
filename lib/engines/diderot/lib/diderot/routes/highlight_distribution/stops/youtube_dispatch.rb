@@ -4,7 +4,7 @@ module Diderot
   module Routes
     module HighlightDistribution
       module Stops
-        class YoutubePropagation < ::Diderot::Routes::ApplicableStop
+        class YoutubeDispatch < ::Diderot::Routes::ApplicableStop
           include Diderot::Concerns::CommandTools::Python
 
           def call
@@ -15,7 +15,7 @@ module Diderot
             distribution_execution_processes = available_games.map(&->(game) {
               lambda do
                 provider.distribution_channels.each do |channel|
-                  distribution, distribution_params = provider.extract_distribution_parameters(game, channel:)
+                  distribution, distribution_params = provider.distribution_parameters_from_game(game, channel:)
                   distribution.update!(status: :processing)
                   url, err, status = bin_exec(:"#{channel}_uploader", distribution_params.to_json)
                   next halt!(:video_distribution_error, err) unless status.success?

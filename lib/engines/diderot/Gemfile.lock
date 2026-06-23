@@ -11,6 +11,7 @@ PATH
       pg (~> 1.6)
       pry (~> 0.14.2)
       rails (~> 6.1.7, >= 6.1.7.10)
+      require_all (~> 3.0)
       selenium-webdriver (= 4.44.0)
 
 GEM
@@ -164,6 +165,7 @@ GEM
       rake (>= 12.2)
       thor (~> 1.0)
     rake (13.3.0)
+    require_all (3.0.0)
     rexml (3.4.1)
     rubyzip (3.3.0)
     selenium-webdriver (4.44.0)

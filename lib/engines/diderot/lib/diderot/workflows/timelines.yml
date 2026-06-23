@@ -1,0 +1,119 @@
+timelines:
+  nba_highlight_generation:
+    key: highlight_generation
+    description: Generate NBA highlights
+    sequence: [0, [1, 2]]
+    strategy: merge
+    reconcilers:
+      log_replay_reconciler:
+        sequence: [1, 2]
+    routes:
+      source_population:
+        name: source_population
+        index: 0
+        description: >
+          Get all the games played and download their videos + logs
+          expectation is to have all the videos sent to S3 and move to
+          the next step
+        sequence: [0, [1, 2]]
+        checks:
+          - required: [] # changeset here should contain the expected keys
+            using: global/balancer
+        balancers:
+          - required: []
+            using: source_population/balancer
+        algorithm: merge
+        stops:
+          team_profiles_retrieval:
+            index: 0
+            parameters: []
+            name: team_profiles_retrieval
+            spawns_processes: true
+            checks:
+              - required: []
+                using: null
+            balancers:
+              - required: []
+                using: null
+          available_games_retrieval:
+            index: 0
+            parameters: []
+            name: available_games_retrieval
+            spawns_processes: false
+            checks:
+              - required: []
+                using: available_games_retrieval/check
+            balancers:
+              - required: []
+                using: available_games_retrieval/balancer
+          game_logs_retrieval:
+            index: 2
+            name: game_logs_retrieval
+            schedulable: true
+            checks:
+              - required: []
+                using: game_logs_retrieval/check
+            balancers:
+              - required: []
+                using: game_logs_retrieval/balancer
+          game_replays_retrieval:
+            name: game_replays_retrieval
+            index: 1
+            spawns_processes: true
+            schedulable: true
+            checks:
+              - required: []
+                using: game_replays_downloader/check
+            balancers:
+              - required: []
+                using: game_replays_downloader/balancer
+        reconcilers:
+          log_replay_reconciler:
+            sequence: [1, 2]
+      highlight_composition:
+        name: highlight_composition
+        index: 1
+        description: |
+          Get all the downloaded video ids, split into chunks using the highlightable events from
+          sportradar and merge the chunks into one output stream. Writes the output to the same folder
+        sequence: [0]
+        checks:
+          - required: ['source_population.downloaded_game_ids']
+            using: global/check
+        balancers:
+          - required: ['highlight_composition.composed_game_ids']
+        stops:
+          replay_recomposition:
+            index: 0
+            parameters: []
+            schedulable: true
+            name: replay_recomposition
+            checks:
+              - required: ['source_population.downloaded_game_ids']
+                using: global/check
+            balancers:
+              - required: ['highlight_composition.composed_game_ids']
+                using: global/balancer
+      highlight_distribution:
+        name: highlight_distribution
+        index: 2
+        description: |
+          Programatically send the videos from the output to youtube. Distribution parameters
+          are stored in the db.
+        checks:
+          - required: ['source_population.available_game_ids', 'highlight_composition.composed_game_ids']
+            using: global/balancer
+        balancers:
+          - required: ['highlight_distribution.distribution_game_ids']
+        stops:
+          youtube_dispatch:
+            name: youtube_dispatch
+            index: 0
+            parameters: []
+            schedulable: true
+            spawns_processes: true
+            checks:
+              - required: ['source_population.available_game_ids', 'highlight_composition.composed_game_ids']
+                using: global/balancer
+            balancers:
+              - required: ['highlight_distribution.distribution_game_ids']

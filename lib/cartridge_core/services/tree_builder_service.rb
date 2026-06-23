@@ -21,7 +21,7 @@ module CartridgeCore
         definition = definition.dig(:timelines, timeline_key)
         tree = Entities::Tree.new(**definition.slice(*Entities::Tree.base_keys)).tap do |tree|
           assign_timeline_context!(tree)
-          confirm_executable_files!(tree.using_namespace(definition.dig(:routes).keys))
+          confirm_executable_files!(tree.using_namespace(:routes, definition.dig(:routes).keys))
           build_and_assign_tree_routes!(tree, definition)
         end
         definition_hash = Digest::MD5.hexdigest(definition.to_json)
@@ -38,7 +38,7 @@ module CartridgeCore
       def default_builder_opts
         @default_builder_opts ||= {
           parameters:          {},
-          scheduled_execution: ::CartridgeCore::Entities::Timelines::ScheduleExecution.new,
+          scheduled_execution: ::CartridgeCore::Entities::Timelines::ScheduledExecution.new,
         }
       end
 
@@ -64,49 +64,57 @@ module CartridgeCore
           route.reconcilers = (definition.dig(:routes, r_key, :reconcilers) || {}).keys.map do |s_key|
             CartridgeCore::Entities::Reconciler.new(**definition.dig(:routes, r_key, :reconcilers, s_key))
           end
+          # build checks and balancers for route
+          route_path = [:routes, r_key]
+          route.checks, route.balancers = build_entity_guard_classes(
+            route_path,
+            tree,
+            definition,
+            state_validation_mod,
+            entity: route,
+          )
+
           # build stops
           path = [:routes, r_key, :stops]
           confirm_executable_files!(tree.using_namespace(definition.dig(*path).keys, group: path.join('/')))
           route.stops = execution.filter_stops(definition.dig(:routes, r_key, :stops)).keys.map do |s_key|
-            stop = CartridgeCore::Entities::Stop.new(**definition.dig(:routes, r_key, :stops, s_key).merge(route:))
-            stop.checks, stop.balancers = build_guard_classes_for_stop(stop, tree, definition, state_validation_mod)
+            stop_path = [:routes, r_key, :stops, s_key]
+            stop = CartridgeCore::Entities::Stop.new(**definition.dig(*stop_path).merge(route:))
+            stop.checks, stop.balancers = build_entity_guard_classes(
+              stop_path,
+              tree,
+              definition,
+              state_validation_mod,
+              entity: stop,
+            )
             stop
-          end
-          # build route checks - TODO: DRY THIS
-          path = [:routes, r_key, :checks].map(&:to_sym)
-          confirm_executable_files!(tree.using_namespace(definition.dig(*path).pluck(:using), group: path.join('/')))
-          route.checks = definition.dig(:routes, r_key, :checks).map do |check_obj|
-            klass = tree.using_namespace([check_obj.dig(:using)], group: path.join('/')).first.camelize
-            klass = Object.const_defined?(klass) ? klass.constantize : default_guard_class
-            klass.new(required: check_obj.dig(:required), entity: route).class.include(state_validation_mod)
-          end
-          # build route balancers
-          path = [:routes, r_key, :balancers]
-          confirm_executable_files!(tree.using_namespace(definition.dig(*path).pluck(:using), group: path.join('/')))
-          route.balancers = definition.dig(:routes, r_key, :balancers).map do |balancer_obj|
-            klass = tree.using_namespace([balancer_obj.dig(:using)], group: path.join('/')).first.camelize
-            klass = Object.const_defined?(klass.camelize) ? klass.constantize : default_guard_class
-            klass.new(required: balancer_obj.dig(:required), entity: route).class.include(state_validation_mod)
           end
         end
       end
 
-      def build_guard_classes_for_stop(stop, tree, definition, state_validation_mod)
+      def build_entity_guard_classes(path, tree, definition, state_validation_mod, entity:)
         build_classes = ->(group) do
-          path = [:routes, stop.route.name, :stops, stop.name, group].map(&:to_sym)
-          confirm_executable_files!(tree.using_namespace(definition.dig(*path).pluck(:using), group: path.join('/')))
-          definition.dig(*path).map do |obj|
-            g_name = tree.using_namespace(obj.dig(:using), group: path.join('/')).first.camelize
-            klass = Object.const_defined?(g_name) ? g_name.constantize : default_guard_class
-            klass.new(required: obj.dig(:required), entity: stop).class.include(state_validation_mod)
+          path = path.map(&:to_sym)
+          guard_definitions = definition.dig(*path, group)
+          filter_valid_guards = ->(obj) { obj.values_at(%i(required using)).select(&:present?).presence }
+          guard_files = guard_definitions.map(&filter_valid_guards).map(&method(:apply_namespace))
+          # If the user specifies a check or balancer classes then make sure those files are present in the source.
+          confirm_executable_files!(guard_files.compact)
+          guard_definitions.zip(guard_files).map do |(obj, guard_file)|
+            (guard_file ? guard_file.constantize : default_guard_class).new(**obj.slice(:required).merge(entity:)).tap do |klass|
+              klass.class.include(state_validation_mod)
+            end
           end
+        rescue
+          require 'pry'
+          binding.pry
         end
         %i(checks balancers).map(&build_classes)
       end
 
       def assign_timeline_context!(tree)
         tree.context = CartridgeCore::Entities::Trees::Context.new(
-          **opts.merge(execution_context: execution.serialized_context || {}),
+          **opts.slice(*%i(parameters load_namespace)).merge(execution_context: execution.serialized_context || {}),
         )
       end
 
@@ -115,6 +123,12 @@ module CartridgeCore
       end
 
       def default_guard_class = ::CartridgeCore::Entities::Check
+
+      def default_guard_file_name = default_guard_class.name.underscore
+
+      def apply_namespace(fname)
+        tree.using_namespace(*path, fname, group: path.join('/')) if fname
+      end
     end
   end
 end
