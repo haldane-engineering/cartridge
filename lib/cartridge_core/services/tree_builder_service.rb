@@ -24,10 +24,9 @@ module CartridgeCore
           confirm_executable_files!(tree.using_namespace(:routes, definition.dig(:routes).keys))
           build_and_assign_tree_routes!(tree, definition)
         end
-        definition_hash = Digest::MD5.hexdigest(definition.to_json)
-        _, tl_state = cache.timeline_state_for(definition_hash)
+        definition_json = definition.to_json
+        _, tl_state = cache.timeline_state_for(Digest::MD5.hexdigest(definition_json), initial_definition: definition)
         tl_state = tl_state.merge(scheduled_executions: [*(tl_state.dig(:scheduled_executions) || []), execution.id])
-        # load the state into the timeline instance
         ::CatridgeCore::Services::CacheActions::Load.apply!(tree, tl_state)
       end
 
@@ -56,37 +55,24 @@ module CartridgeCore
           state_validation_mod = ::CartridgeCore::Entities::Concerns::StateIntegrityEnforcement
           route = route_class.new(**definition.dig(:routes, r_key).slice(*route_class.base_keys))
           # pass on tree context to route
-          route.context = CartridgeCore::Entities::Trees::Context.new(**(opts.dig(
-            :parameters,
-            route.name.to_sym,
-          ) || {}))
+          route_context_params = opts.dig(:parameters, route.name.to_sym) || {}
+          route.context = CartridgeCore::Entities::Trees::Context.new(**route_context_params)
           # build reconcilers
           route.reconcilers = (definition.dig(:routes, r_key, :reconcilers) || {}).keys.map do |s_key|
             CartridgeCore::Entities::Reconciler.new(**definition.dig(:routes, r_key, :reconcilers, s_key))
           end
           # build checks and balancers for route
           route_path = [:routes, r_key]
-          route.checks, route.balancers = build_entity_guard_classes(
-            route_path,
-            tree,
-            definition,
-            state_validation_mod,
-            entity: route,
-          )
-
+          guard_entity_args = [route_path, tree, definition, state_validation_mod]
+          route.checks, route.balancers = build_entity_guard_classes(*guard_entity_args, entity: route)
           # build stops
           path = [:routes, r_key, :stops]
           confirm_executable_files!(tree.using_namespace(definition.dig(*path).keys, group: path.join('/')))
           route.stops = execution.filter_stops(definition.dig(:routes, r_key, :stops)).keys.map do |s_key|
             stop_path = [:routes, r_key, :stops, s_key]
             stop = CartridgeCore::Entities::Stop.new(**definition.dig(*stop_path).merge(route:))
-            stop.checks, stop.balancers = build_entity_guard_classes(
-              stop_path,
-              tree,
-              definition,
-              state_validation_mod,
-              entity: stop,
-            )
+            stop_guard_entity_params = [stop_path, tree, definition, state_validation_mod]
+            stop.checks, stop.balancers = build_entity_guard_classes(*stop_guard_entity_params, entity: stop)
             stop
           end
         end
@@ -105,9 +91,6 @@ module CartridgeCore
               klass.class.include(state_validation_mod)
             end
           end
-        rescue
-          require 'pry'
-          binding.pry
         end
         %i(checks balancers).map(&build_classes)
       end

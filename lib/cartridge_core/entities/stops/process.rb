@@ -12,12 +12,20 @@ module CartridgeCore
         def persist!
           index = route.timeline.stop_processes.find_index { |st_process| st_process.id == id }
           index ? route.timeline.stop_processes[index] = self : route.timeline.stop_processes.unshift(self)
-          match = ->(process_json) { process_json.dig(:id) == id }
-          route.timeline.tree_state.stop_processes.unshift({ id: }) unless route.timeline.stree_state.find(&match)
+          match = ->(process_json) { process_json[:id] == id }
+          route.timeline.tree_state.stop_processes.unshift({ id: }) unless route.timeline.tree_state.find(&match)
           route.timeline.persist!
         end
 
-        Unit = Struct.new(*%i(id actual_completion_value expected_completion_value metadata stop_process_id route)) do
+        self::Unit = Struct.new(*%i(
+          id
+          actual_completion_value
+          expected_completion_value
+          metadata
+          stop_process_id
+          route
+          state_entry_value
+        )) do
           include CartridgeCore::Cache::Concerns::SelectivePersistence
 
           def persist!
