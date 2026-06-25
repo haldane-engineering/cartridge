@@ -13,7 +13,7 @@ module CartridgeCore
         @timeline_key = timeline_key
         @opts = default_builder_opts.merge(options)
         @cache = CartridgeCore::ICache.new
-        @execution = opts.dig(:scheduled_execution)
+        @scheduled_execution = opts.dig(:scheduled_timeline_execution)
       end
 
       def build
@@ -26,18 +26,23 @@ module CartridgeCore
         end
         definition_json = definition.to_json
         _, tl_state = cache.timeline_state_for(Digest::MD5.hexdigest(definition_json), initial_definition: definition)
-        tl_state = tl_state.merge(scheduled_executions: [*(tl_state.dig(:scheduled_executions) || []), execution.id])
-        ::CatridgeCore::Services::CacheActions::Load.apply!(tree, tl_state)
+        # Scheduled executions are global objects, mostly independent of any state, but we also need to track it state wise
+        # we use the execution to filter already run routes and stops as a continuity conduit. If no scheduled execution then
+        # we initialize a new one without the id and go through with the rest of the process.
+        tl_state = tl_state.merge(scheduled_timeline_executions: [
+          *tl_state.fetch(:scheduled_timeline_executions, []), scheduled_execution.id,
+        ]) if scheduled_execution.id
+        ::CartridgeCore::Services::CacheActions::Load.apply!(tree, tl_state)
       end
 
       private
 
-      attr_reader(*%i(timeline_key opts cache execution))
+      attr_reader(*%i(timeline_key opts cache scheduled_execution))
 
       def default_builder_opts
         @default_builder_opts ||= {
-          parameters:          {},
-          scheduled_execution: ::CartridgeCore::Entities::Timelines::ScheduledExecution.new,
+          parameters:                   {},
+          scheduled_timeline_execution: ::CartridgeCore::Entities::ScheduledTimelineExecution.new,
         }
       end
 
@@ -49,7 +54,7 @@ module CartridgeCore
       end
 
       def build_and_assign_tree_routes!(tree, definition)
-        tree.routes = execution.filter_routes(definition.dig(:routes)).keys.map do |r_key|
+        tree.routes = scheduled_execution.filter_routes(definition.dig(:routes)).keys.map do |r_key|
           # probably need to assign parameters someone here - confirm during run
           route_class = ::CartridgeCore::Entities::Route
           state_validation_mod = ::CartridgeCore::Entities::Concerns::StateIntegrityEnforcement
@@ -68,7 +73,7 @@ module CartridgeCore
           # build stops
           path = [:routes, r_key, :stops]
           confirm_executable_files!(tree.using_namespace(definition.dig(*path).keys, group: path.join('/')))
-          route.stops = execution.filter_stops(definition.dig(:routes, r_key, :stops)).keys.map do |s_key|
+          route.stops = scheduled_execution.filter_stops(definition.dig(:routes, r_key, :stops)).keys.map do |s_key|
             stop_path = [:routes, r_key, :stops, s_key]
             stop = CartridgeCore::Entities::Stop.new(**definition.dig(*stop_path).merge(route:))
             stop_guard_entity_params = [stop_path, tree, definition, state_validation_mod]
@@ -97,7 +102,9 @@ module CartridgeCore
 
       def assign_timeline_context!(tree)
         tree.context = CartridgeCore::Entities::Trees::Context.new(
-          **opts.slice(*%i(parameters load_namespace)).merge(execution_context: execution.serialized_context || {}),
+          **opts.slice(*%i(parameters load_namespace)).merge(
+            execution_context: scheduled_execution.serialized_context || {},
+          ),
         )
       end
 

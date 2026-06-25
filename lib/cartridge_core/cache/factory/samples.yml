@@ -29,7 +29,7 @@ parameter:
         - hello: world
           usable: true
         - testing: this
-process: # for processes
+stop_process: # for processes
   id: rp_99
   stop_name: game_replays_retrieval
   timeline_id: t_12
@@ -45,7 +45,7 @@ unit: # for process_units
   metadata: "{}"
   stop_process_id: rp_99
   state_entry_value: 121 # in this case this will be the id of the game replay in the db
-scheduled_execution:
+scheduled_timeline_execution:
   id: ssid_1
   timeline_id: t_1
   status: queued

@@ -29,8 +29,12 @@ module CartridgeCore
           # remember: the root timeline only contains references
           # so we populate all root entries, e.g -> { id: 1234, head: 1243, commits: [2323, 23343], trees }
           #  becomes { ...rest_of_hash, commits: [{ id: 2323, ...rest_of_commit_body }] }
-          load_opts[:eager_load_keys].each do |a_key|
-            populate_timeline_associations_using_cursor!(timeline, a_key, load_opts)
+          load_opts[:eager_load_keys].each do |association_key|
+            populate_timeline_associations_using_cursor!(
+              timeline,
+              association_key,
+              load_opts,
+            ) if timeline[association_key].present?
           end
           timeline
         end
@@ -66,9 +70,9 @@ module CartridgeCore
             obj_query = "$.#{index}.[?(@.#{field_title} == '#{field_value}')]"
             p obj_query
             result = redis.call('JSON.GET', root_w_namespace, obj_query)
-            JSON.parse(result).first.deep_symbolize_keys if result
+            JSON.parse(result).first if result
           end
-          query.keys.zip(result_set).to_h
+          query.keys.zip(result_set.compact.map(&:deep_symbolize_keys)).to_h
         end
 
         def root_get(key, klass)
@@ -119,37 +123,41 @@ module CartridgeCore
           # retrieving with JSON.get returns an array type
           timeline = timeline.deep_symbolize_keys.merge(**timeline_tree)
           # trees commits events stop processes and units will all be an array of ids
-          root_idx_keys.each { |key| timeline[key] = timeline_tree[key].pluck(:id) + timeline[key] }
-          timeline[:trees] = [timeline_tree.dig(:head), *(timeline[:trees] || [])]
+          root_idx_keys.each { |key| timeline[key] = [*timeline_tree[key], *timeline[key]].pluck(:id).uniq.compact }
+          timeline[:trees] = [timeline_tree.dig(:head), *(timeline[:trees]&.keys || [])]
           redis.call('JSON.SET', root_w_namespace, "$.timelines.#{timeline_id}", timeline.to_json)
         end
 
         def nil_timeline_state = root_idx_keys.index_with([]).merge(head: nil)
 
-        def populate_timeline_associations_using_cursor!(timeline, association, load_opts)
-          offset, limit = load_opts[:cursor].merge(load_opts[association] || {}).values_at(*%i(offset limit))
-          idx_to_records = ->(idx, assoc) do
-            # apply constraints first
-            idx = idx.slice(offset, limit + offset)
-            association_query = idx.map { |id| "@.id == '#{id}'" }.join('||')
-            results = redis.call('JSON.GET', root_with_namespace, "$.#{assoc}[?(#{association_query}})]")
-            JSON.parse(results) if results
-          end
-          # this naively (have to address later) assumes that associations can only be two tiers deep i.e
-          # { timeline: { trees: [{ commits: [commit_id] }], commits: [commit] } }
-          fully_populated_association_entries = (idx_to_records.call(
-            timeline[association],
-            association,
-          ) || []).map do |record|
-            eager_load_intersection = record.keys.map(&:to_sym) & load_opts[:eager_load_keys] == []
-            next record if eager_load_intersection.blank?
+        def populate_timeline_associations_using_cursor!(timeline, association_key, load_opts)
+          offset, limit = load_opts[:cursor].merge(load_opts[association_key] || {}).values_at(*%i(offset limit))
+          # recursively populate deeply nested associations
+          populate_args = [timeline[association_key], association_key, limit, offset]
+          fully_populated_association_entries = populate_timeline_association_from_cache(*populate_args).map do |association_record|
+            eager_load_intersection = association_record.keys.map(&:to_sym) & load_opts[:eager_load_keys]
+            next association_record if eager_load_intersection.blank?
 
+            # this naively (have to address later) assumes that associations can only be two tiers deep i.e
+            # { timeline: { trees: [{ commits: [commit_id] }], commits: [commit] } }
             eager_load_intersection.each do |eload_key|
-              record[eload_key] = idx_to_records(record[eload_key], eload_key)
+              association_record[eload_key] = populate_timeline_association_from_cache(
+                association_record[eload_key], eload_key, limit, offset
+              ) if association_record[eload_key].present?
             end
           end
-          timeline[association] = fully_populated_association_entries
+          timeline[association_key] = fully_populated_association_entries.compact
           timeline
+        end
+
+        def populate_timeline_association_from_cache(*args)
+          # apply constraints first
+          idx, assoc, limit, offset = args
+          idx = idx.slice(offset, limit + offset)
+          association_query = idx.map { |id| "@.id == '#{id}'" }.join('||')
+          p ['JSON.GET', root_w_namespace, "$.#{assoc}.[?(#{association_query}})]"]
+          results = redis.call('JSON.GET', root_w_namespace, "$.#{assoc}[?(#{association_query})]")
+          JSON.parse(results) if results
         end
 
         def prefix_root(root) = "#{root ? "#{root}:" : ""}#{configuration[:root_namespace]}"
@@ -175,7 +183,7 @@ module CartridgeCore
             events
             stop_processes
             stop_process_units
-            scheduled_executions
+            scheduled_timeline_executions
           )
         end
 

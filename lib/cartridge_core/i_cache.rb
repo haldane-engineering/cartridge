@@ -79,11 +79,15 @@ module CartridgeCore
     # @preturn [Hash] an empty hash with all entries empty
     def initial_timeline_tree(definition_hash, definition_json)
       {
-        id:                   SecureRandom.hex(8),
-        head:                 Factory.initial_timestamp,
-        definition_id:        definition_hash,
-        definitions:          [{ raw: definition_json, id: definition_hash, timestamp: Factory.initial_timestamp }],
-        trees:                {
+        id:                            SecureRandom.hex(8),
+        head:                          Factory.initial_timestamp,
+        definition_id:                 definition_hash,
+        definitions:                   [{
+          raw:       definition_json,
+          id:        definition_hash,
+          timestamp: Factory.initial_timestamp,
+        }],
+        trees:                         {
           "#{Factory.initial_timestamp}": {
             current:        {},
             commits:        [],
@@ -92,13 +96,14 @@ module CartridgeCore
             parameters:     [],
             definition_id:  definition_hash,
             routes:         {},
+            id:             Factory.initial_timestamp,
           },
         },
-        commits:              [],
-        events:               [],
-        stop_processes:       [],
-        stop_process_units:   [],
-        scheduled_executions: [],
+        commits:                       [],
+        events:                        [],
+        stop_processes:                [],
+        stop_process_units:            [],
+        scheduled_timeline_executions: [],
       }
     end
 
@@ -117,7 +122,7 @@ module CartridgeCore
         def build(*args) = new(*args).build
 
         def initial_commit
-          state_commit = build(::CartridgeCore::Entities::Stops::Process)
+          state_commit = build(::CartridgeCore::Entities::StopProcess)
           ::CartridgeCore::Entities::TreeStates::RepositoryCommit.new(
             commit: state_commit,
             id: state_commit.id,
@@ -137,9 +142,9 @@ module CartridgeCore
           real_commit = build(::CartridgeCore::Entities::TreeStates::Commit)
           sample_parameter_set = build(::CartridgeCore::Entities::Trees::Parameter)
           sample_event = ::CartridgeCore::Entities::EventBus::Event.new(title: :initialized_state, id: r_timestamp)
-          sample_stop_process = build(::CartridgeCore::Entities::Stops::Process)
-          sample_stop_process_unit = build(::CartridgeCore::Entities::Stops::Process::Unit)
-          sample_scheduled_execution = build(::CartridgeCore::Entities::Timelines::ScheduledExecution)
+          sample_stop_process = build(::CartridgeCore::Entities::StopProcess)
+          sample_stop_process_unit = build(::CartridgeCore::Entities::Stoprocess::Unit)
+          sample_scheduled_execution = build(::CartridgeCore::Entities::ScheduledTimelineExecution)
           initial_commit = ::CartridgeCore::Entities::TreeStates::RepositoryCommit.new(
             commit: real_commit,
             id: real_commit.id,
@@ -147,15 +152,15 @@ module CartridgeCore
             applied_at: r_timestamp,
           )
           {
-            id:                   SecureRandom.hex(8),
-            head:                 r_timestamp,
-            definition_id:        @sample_definition.id,
-            definitions:          [{
+            id:                            SecureRandom.hex(8),
+            head:                          r_timestamp,
+            definition_id:                 @sample_definition.id,
+            definitions:                   [{
               raw:       @sample_definition.to_json,
               id:        @sample_definition.id,
               timestamp: r_timestamp,
             }],
-            trees:                {
+            trees:                         {
               "#{r_timestamp}": {
                 current:        {},
                 commits:        [initial_commit.persistable_state],
@@ -169,11 +174,11 @@ module CartridgeCore
                 },
               },
             },
-            commits:              [initial_commit.persistable_state],
-            events:               [sample_event.persistable_state],
-            stop_processes:       [sample_stop_process.persistable_state],
-            stop_process_units:   [sample_stop_process_unit.persistable_state],
-            scheduled_executions: [sample_scheduled_execution],
+            commits:                       [initial_commit.persistable_state],
+            events:                        [sample_event.persistable_state],
+            stop_processes:                [sample_stop_process.persistable_state],
+            stop_process_units:            [sample_stop_process_unit.persistable_state],
+            scheduled_timeline_executions: [sample_scheduled_execution],
           }
         end
       end
@@ -186,6 +191,9 @@ module CartridgeCore
         factory_key = @klass.name.split('::').last.underscore.to_sym
         yaml_content = YAML.safe_load_file(Rails.root.join('lib/cartridge_core/cache/factory/samples.yml')).deep_symbolize_keys
         @klass.new(**yaml_content[factory_key])
+      rescue
+        require 'pry'
+        binding.pry
       end
     end
   end

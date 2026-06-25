@@ -17,13 +17,13 @@ module CartridgeCore
           # load the timeline
           cache = ::CartridgeCore::ICache.new
           # TODO: delegate root_get
-          executions = cache.root_get(:scheduled_executions, ::CartridgeCore::Entities::Timelines::ScheduledExecution)
+          executions = cache.root_get(:scheduled_timeline_executions, ::CartridgeCore::Entities::ScheduledTimelineExecution)
           match = ->(execution) {
             execution.queued? && Time.zone.parse(execution.executes_at).between?(1.minute.ago, 1.minute.from_now)
           }
           executions.select(&match).each do |execution|
             timeline = JSON.parse(cache.get({ timelines: { id: execution.timeline_id } }))
-            ::CartridgeCore::Orchestrator(timeline.dig(:key), scheduled_execution: execution)
+            ::CartridgeCore::Orchestrator(timeline.dig(:key), scheduled_timeline_execution: execution)
             execution.set(state: :processed).persist!
           end
         end
