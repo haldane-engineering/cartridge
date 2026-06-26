@@ -13,7 +13,6 @@ module CartridgeCore
 
     def call
       # take the timeline name
-      timeline = CartridgeCore::Services::TreeBuilderService.build(timeline_key, **opts)
       # build the time line tree
       # loop through the routes using the sequence
       # for each route -> first run the check through the tree state
@@ -30,20 +29,21 @@ module CartridgeCore
       #  are returned as a payload to the orchestrator -> orchestrator "merges" in the changes to the tree state,
       #  after taking a version snapshot, and also saves the diffs in a way that the changes could be played back
       # for each unit of the sequence
-      sort_routes_by_sequence(timeline.routes).map do |route|
-        # remember that at this point rsoute could also be [1,2]
+      @timeline = CartridgeCore::Services::TreeBuilderService.build(timeline_key, **opts)
+      sort_routes_by_sequence(@timeline.routes).map do |route|
+        # remember that at this point route could also be [1,2]
         # after sorting through the routes, it could look like this [RouteClass1, [RouteClass2, RouteClass3]]
         if route.is_a?(CartridgeCore::Entities::Route)
-          route.use_timeline!(timeline).traverse!
+          route.use_timeline!(@timeline).traverse!
         else
           reconciler = ::CartridgeCore::Entities::Reconciler.new
           # route here is a misnomer -> it will be a route group in this stead
-          routes = route.map { |route| ->() { route.use_timeline!(timeline).traverse! } }
+          routes = route.map { |route| ->() { route.use_timeline!(@timeline).traverse! } }
           reconciler.concurrently_execute_with_reconciliation!(routes)
         end
       end
 
-      timeline.reload!
+      @timeline.reload!
     end
 
     private
@@ -56,13 +56,13 @@ module CartridgeCore
       reconciler.concurrently_execute_with_reconciliation!(routes)
     end
 
-    def source_routes_by_sequence(routes)
-      return routes if timeline.sequence.empty?
+    def sort_routes_by_sequence(routes)
+      return routes if @timeline.sequence.empty?
 
-      timeline.sequence.map do |entry_index|
+      @timeline.sequence.map do |entry_index|
         next routes[entry_index] unless entry_index.is_a?(Array)
 
-        entry_index.map { |index| timeline.routes[index] }
+        entry_index.map { |index| @timeline.routes[index] }
       end
     end
   end

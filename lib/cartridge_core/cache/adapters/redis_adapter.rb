@@ -76,7 +76,6 @@ module CartridgeCore
         end
 
         def root_get(key, klass)
-          # Assumption here is that every
           index_resp = redis.call('JSON.GET', root_w_namespace, '$') || empty_index_response
           index_resp = JSON.parse(index_resp)
           index_resp.map(&->(obj) { klass.new(**obj) })
@@ -123,7 +122,10 @@ module CartridgeCore
           # retrieving with JSON.get returns an array type
           timeline = timeline.deep_symbolize_keys.merge(**timeline_tree)
           # trees commits events stop processes and units will all be an array of ids
-          root_idx_keys.each { |key| timeline[key] = [*timeline_tree[key], *timeline[key]].pluck(:id).uniq.compact }
+          root_idx_keys.each do |key|
+            compound_association_ids = [*timeline_tree[key], *timeline[key]].compact.pluck(:id)
+            timeline[key] = compound_association_ids.map(&:to_s).uniq
+          end
           timeline[:trees] = [timeline_tree.dig(:head), *(timeline[:trees]&.keys || [])]
           redis.call('JSON.SET', root_w_namespace, "$.timelines.#{timeline_id}", timeline.to_json)
         end
@@ -145,6 +147,8 @@ module CartridgeCore
                 association_record[eload_key], eload_key, limit, offset
               ) if association_record[eload_key].present?
             end
+
+            association_record
           end
           timeline[association_key] = fully_populated_association_entries.compact
           timeline

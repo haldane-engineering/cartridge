@@ -32,6 +32,7 @@ module CartridgeCore
         tl_state = tl_state.merge(scheduled_timeline_executions: [
           *tl_state.fetch(:scheduled_timeline_executions, []), scheduled_execution.id,
         ]) if scheduled_execution.id
+
         ::CartridgeCore::Services::CacheActions::Load.apply!(tree, tl_state)
       end
 
@@ -80,6 +81,7 @@ module CartridgeCore
             stop.checks, stop.balancers = build_entity_guard_classes(*stop_guard_entity_params, entity: stop)
             stop
           end
+          route
         end
       end
 

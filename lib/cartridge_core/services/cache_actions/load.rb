@@ -4,17 +4,17 @@ module CartridgeCore
   module Services
     module CacheActions
       class Load
+        TL_IDENTIFIER = 'id'
+
         def self.apply!(*args) = new.apply!(*args)
 
         def apply!(tree, tl_state)
-          assign_timeline_attributes(tl_state, tree)
-          tree_state_class = ::CartridgeCore::Entities::TreeState
-
-          tree_state = tl_state.dig(:trees, tl_state[:head])
-          tree.tree_state = tree_state_class.new(**tree_state.slice(tree_state_class.state_keys))
+          assign_timeline_attributes!(tl_state, tree)
+          # Yep I understand that tree.trees is an etymological fallacy - please allow :)
+          tree.tree_state = tree.trees.find(&->(tree) { tree.id == tl_state[:head].to_s })
           # build state for each of the contained routes
           tree.routes.each do |route|
-            route_slice_keys = tree_state.current.keys.keep_if { |k| k.to_s.include?(route.name.to_s) }
+            route_slice_keys = tree.tree_state.current.keys.keep_if { |k| k.to_s.include?(route.name.to_s) }
             route.tree_state = tree.tree_state.current.slice(*route_slice_keys)
           end
           tree
@@ -22,7 +22,7 @@ module CartridgeCore
 
         private
 
-        def assign_timeline_attributes(tl_state, timeline)
+        def assign_timeline_attributes!(tl_state, timeline)
           # build the rest of the timeline associations (definitions, events, commits, trees, id, head, stop_pro)
           tl_state.keys.each do |tl_attribute_key|
             attribute_value = tl_state[tl_attribute_key]
@@ -35,8 +35,12 @@ module CartridgeCore
           end
         end
 
-        # TODO: Move stop processes and scheduled executions to root folder
-        def entity_for(key) = "::CartridgeCore::Entities::#{key.singularize.camelize}".constantize
+        def entity_for(key)
+          case key.to_sym
+          when :trees then ::CartridgeCore::Entities::TreeState
+          else "::CartridgeCore::Entities::#{key.singularize.camelize}".constantize
+          end
+        end
       end
     end
   end
