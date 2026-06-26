@@ -14,6 +14,7 @@ module CartridgeCore
       spawns_processes
       schedulable
       schedules_execution
+      class_name
     )
     Stop = Struct.new(*STOP_KEYS, keyword_init: true) do
       include CartridgeCore::Services::EventBus::Concerns::Propagation

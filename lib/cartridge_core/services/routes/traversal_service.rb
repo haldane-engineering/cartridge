@@ -10,7 +10,7 @@ module CartridgeCore
 
         def initialize(route, **traversal_opts)
           @route = route
-          @context = Context.new(default_travelsal_opts.merge(traversal_opts))
+          @context = Context.new(default_traversal_opts.merge(traversal_opts))
         end
 
         def call
@@ -19,10 +19,6 @@ module CartridgeCore
           preselect_stops_in_context(populate_stops_with_sequence(route.stops)).each do |stop|
             next process_stops_with_reconciler(stop) if stop.is_a?(Array)
 
-            # routes should also provide some shared context
-            # stops should be able to get input from the already
-            # stop.apply! applies it's contained logic, generates it's changeset and
-            # internally sets it to the attribute. It also updates the context.
             commit_stop_changeset_to_tree_state!(stop.apply!)
           end
         ensure
@@ -41,18 +37,15 @@ module CartridgeCore
         end
 
         def populate_stops_with_sequence(stops)
-          route.sequence.map do |s_index|
+          stops_sequence = route.sequence.presence || route.stops.map.with_index(&->(_, index) { index })
+          stops_sequence.map do |s_index|
             next stop_for(s_index) unless s_index.is_a?(Array)
 
             s_index.map { |stop_index| [stop_index, stop_for(stop_index)] }
           end
         end
 
-        def stop_for(index)
-          stop_entry = route.stops.values.find { |stop| stop.dig(:index) == index }
-          CartridgeCore::Entities::Stop.new(**stop_entry.slice(*%i(name)).merge(route:))
-          # "#{route.name}::Stops::#{stop_entry.dig(:name).camelize}".constantize.new(route:)
-        end
+        def stop_for(index) = route.stops.find(&->(stop) { stop.index == index })
 
         # rubocop:disable Style/NestedTernaryOperator
         # @param [String] stops - a list of stops to executed. Useful for replays

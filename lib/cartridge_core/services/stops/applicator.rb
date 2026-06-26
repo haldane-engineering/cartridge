@@ -24,11 +24,13 @@ module CartridgeCore
           # check class should be able to make all the necessary sanity checks on the state but allow
           # TODO - stop checks should ensure that the parameters defined in the definitions yml are
           # present in the route's parameters.
-          check_errors = stop.checks(&method(:initialize_check)).map(&:apply!)
+          check_errors = stop.checks.map(&->(check) {
+            check.validate_entity_state_with_changeset!(stop.route.tree_state)
+          })
           return fail!(stop, :stop_application_error, check_errors.map(&:message)) if check_errors.any?
 
           # stop_class_here is the the stop defined in the main application -> e.g diderot::stops::available_games
-          stop_class = "#{route.name}/#{stop.name}".camelize.constantize
+          stop_class = stop.class_name.camelize.constantize
           stop_class.include(::CartridgeCore::Entities::Stops::Cartridges::ProcessPropagation) if stop.spawns_processes?
           stop_class.include(::CartridgeCore::Entities::Stops::Cartridges::ScheduleExecution) if stop.schedules_execution?
           # route.context.parameters.dig(stop.name) -> will yield list of passed params for the stop.

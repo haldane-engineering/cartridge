@@ -77,6 +77,7 @@ module CartridgeCore
           route.stops = scheduled_execution.filter_stops(definition.dig(:routes, r_key, :stops)).keys.map do |s_key|
             stop_path = [:routes, r_key, :stops, s_key]
             stop = CartridgeCore::Entities::Stop.new(**definition.dig(*stop_path).merge(route:))
+            stop.class_name = tree.using_namespace(s_key, group: path.join('/')).first
             stop_guard_entity_params = [stop_path, tree, definition, state_validation_mod]
             stop.checks, stop.balancers = build_entity_guard_classes(*stop_guard_entity_params, entity: stop)
             stop

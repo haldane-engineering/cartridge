@@ -2,7 +2,19 @@
 
 module CartridgeCore
   module Entities
-    ROUTE_KEYS = %i[tree_state timeline stops reconcilers name index context checks balancers].freeze
+    ROUTE_KEYS = %i[
+      tree_state
+      timeline
+      stops
+      reconcilers
+      name
+      index
+      context
+      checks
+      balancers
+      parameters
+      sequence
+    ].freeze
     Route = Struct.new(*ROUTE_KEYS, keyword_init: true) do
       include CartridgeCore::Entities::Concerns::TreeState::CommitOperations
       include CartridgeCore::Services::EventBus::Concerns::Propagation
@@ -16,9 +28,12 @@ module CartridgeCore
 
       # @param
       def use_timeline!(timeline)
-        @timeline ||= timeline
-        @tree_state ||= ::CartridgeCore::Entities::TreeState.new(current: timeline.tree_state.current.slice(name) || {})
-        @parameters ||= Timeline::Tree::Parameters.wrap(timeline.context.parameters.dig(name))
+        self.timeline ||= timeline
+        self.tree_state ||= ::CartridgeCore::Entities::TreeState.new(current: timeline.tree_state.current.slice(name) || {})
+        self.parameters ||= ::CartridgeCore::Entities::Trees::Parameters.new(**timeline.context.parameters.fetch(
+          name,
+          {},
+        ))
         self
       end
 
