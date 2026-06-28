@@ -61,7 +61,10 @@ module CartridgeCore
           state_validation_mod = ::CartridgeCore::Entities::Concerns::StateIntegrityEnforcement
           route = route_class.new(**definition.dig(:routes, r_key).slice(*route_class.base_keys))
           # pass on tree context to route
-          route_context_params = opts.dig(:parameters, route.name.to_sym) || {}
+          route_context_params = opts.slice(*Entities::Trees::CONTEXT_KEYS).merge(parameters: opts.dig(
+            :parameters,
+            route.name.to_sym,
+          ) || {})
           route.context = CartridgeCore::Entities::Trees::Context.new(**route_context_params)
           # build reconcilers
           route.reconcilers = (definition.dig(:routes, r_key, :reconcilers) || {}).keys.map do |s_key|

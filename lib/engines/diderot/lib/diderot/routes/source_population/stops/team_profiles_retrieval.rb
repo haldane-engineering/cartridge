@@ -1,7 +1,5 @@
 # frozen_string_literal: true
 
-require 'sportsradar/provider'
-
 module Diderot
   module Routes
     module SourcePopulation

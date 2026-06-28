@@ -4,6 +4,12 @@ module CartridgeCore
   module Entities
     module Stops
       module Cartridges
+        module Enablement
+          %i(spawns_processes schedules_execution).each do |enablement_name|
+            define_method(:"#{enablement_name}?", &->() { __send__(enablement_name) })
+          end
+        end
+
         module ProcessProgagation
           def spawn_processes!(process_unit_blocks, **process_opts)
             # it is important that process_opts here contains the stop

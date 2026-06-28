@@ -2,7 +2,7 @@
 
 module Diderot
   module Providers
-    module SportsRadar
+    module Sportsradar
       class NBA
         CONFIG_KEYS = %i(
           team_class
@@ -88,16 +88,16 @@ module Diderot
 
         def configuration
           @configuration ||= ProviderConfiguration.new(
-            team_class: ::Diderot::NBA::Team,
-            player_class: ::Diderot::NBA::Player,
-            team_membership_class: ::Diderot::NBA::TeamMembership,
-            game_class: ::Dideror::NBA::Game.includes(*%i(home_team away_team)),
-            game_log_class: ::Diderot::NBA::GameLog,
+            team_class: ::Diderot::Nba::Team,
+            player_class: ::Diderot::Nba::Player,
+            team_membership_class: ::Diderot::Nba::TeamMembership,
+            game_class: ::Dideror::Nba::Game.includes(*%i(home_team away_team)),
+            game_log_class: ::Diderot::Nba::GameLog,
             settings:,
             timezone: 'US/Eastern',
             images_provider: ::Diderot::Providers::Images::SportsDB.new,
             decorators: {
-              team: Decorators::NBA::TeamDecorator,
+              team: Decorators::Nba::TeamDecorator,
             },
           )
         end
@@ -153,18 +153,18 @@ module Diderot
 
           def team_attributes_from_json(team_json)
             external_id = team_json.delete(configuration.settings.dig(:identifier_key))
-            persistable_json = team_json.slice(*::Diderot::NBA::Team.attribute_names).compact
-            persistable_json.merge(external_id:, league_id: NBA.league.id)
+            persistable_json = team_json.slice(*::Diderot::Nba::Team.attribute_names).compact
+            persistable_json.merge(external_id:, league_id: Nba.league.id)
           end
 
           def player_attributes_from_json(player_json)
             external_id = player_json.delete(configuration.settings.dig(:identifier_key))
-            persistable_json = player_json.slice(*::Diderot::NBA::Player.attribute_names).compact
-            persistable_json.merge(external_id:, league_id: NBA.league.id)
+            persistable_json = player_json.slice(*::Diderot::Nba::Player.attribute_names).compact
+            persistable_json.merge(external_id:, league_id: Nba.league.id)
           end
 
           def game_attributes_from_json(game_json)
-            game_json.slice(*Diderot::NBA::Game.attribute_names).compact.merge(
+            game_json.slice(*Diderot::Nba::Game.attribute_names).compact.merge(
               scheduled_at: game_json['scheduled'],
               external_id: game_json['id'],
               external_reference_id: game_json['sr_id'],
@@ -175,7 +175,7 @@ module Diderot
               venue_name: game_json.dig(*%w(venue name)),
               home_team_id: internal_team_id_for(game_json.dig(*%w(home id))),
               away_team_id: internal_team_id_for(game_json.dig(*%w(away id))),
-              league_id: NBA.league.id,
+              league_id: Nba.league.id,
               metadata: { special_context_title: 'Full Highlights' },
             )
           end
@@ -185,14 +185,14 @@ module Diderot
             match_relevant_events = ->(event) {
               configuration.settings.dig(:persistable_game_log_event_types).include?(event['event_type'])
             }
-            game_log_json.slice(*Diderot::NBA::GameLog.attribute_names).merge(
+            game_log_json.slice(*Diderot::Nba::GameLog.attribute_names).merge(
               game_id: game.id,
               raw_json: game_log_json.merge(events: game_log_json.dig('events').select(&match_relevant_events)),
               external_id:,
             )
           end
 
-          def internal_team_id_for(external_team_id) = ::Diderot::NBA::Team.find_by!(external_id: external_team_id)
+          def internal_team_id_for(external_team_id) = ::Diderot::Nba::Team.find_by!(external_id: external_team_id)
         end
 
         ProviderConfiguration = Struct.new(*CONFIG_KEYS, keyword_init: true)
@@ -208,7 +208,7 @@ module Diderot
               def title_components(game)
                 [
                   game.participants.map(&:full_name).join(' vs '),
-                  game.meta('special_context.title'), # e.g NBA finals will have special context 'NBA Finals Game 1'
+                  game.meta('special_context.title'), # e.g Nba finals will have special context 'Nba Finals Game 1'
                   "| #{game.scheduled_at.strftime("%B %-d, %Y")}",
                 ].join(', ')
               end
@@ -219,7 +219,7 @@ module Diderot
                 }).merge(
                   **game_specific_keys.index_with(&->(key) { game.meta("distributions.youtube.#{key}") }),
                   file_path: game.output_video_path,
-                  # e.g San Antonio Spurs vs New York Knicks Full Game 2 Highlights - June 5, 2026 | NBA Finals
+                  # e.g San Antonio Spurs vs New York Knicks Full Game 2 Highlights - June 5, 2026 | Nba Finals
                   title: title_components(game),
                 ))
               end

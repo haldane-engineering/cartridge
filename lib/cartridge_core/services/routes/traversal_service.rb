@@ -3,7 +3,7 @@
 module CartridgeCore
   module Services
     module Routes
-      class TraversalService < BaseService
+      class TraversalService < Services::Base
         include ::CartridgeCore::Errors::DynamicPropagation
 
         def self.call(*args) = new(*args).call
@@ -19,7 +19,9 @@ module CartridgeCore
           preselect_stops_in_context(populate_stops_with_sequence(route.stops)).each do |stop|
             next process_stops_with_reconciler(stop) if stop.is_a?(Array)
 
-            commit_stop_changeset_to_tree_state!(stop.apply!)
+            stop.apply!
+            halt!(:unsuccesful_stop_execution_error, stop.context.errors.map(&:message)) unless stop.context.success?
+            commit_stop_changeset_to_tree_state!(stop)
           end
         ensure
           route.timeline.register_activity!(route, :route_application_end)
@@ -30,7 +32,6 @@ module CartridgeCore
         attr_reader :route, :context
 
         def commit_stop_changeset_to_tree_state!(stop)
-          halt!(:unsuccesful_stop_execution_error, stop.context.errors.map(&:message)) unless stop.context.success?
           merge_ctx = ::CartridgeCore::Services::Changeset::Merger.call(stop, stop.changeset)
           halt!(:unsuccessful_merge_error, merge_ctx.errors) unless merge_ctx.success?
           route.commit!(stop.changeset, merge_ctx.payload)

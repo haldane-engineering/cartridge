@@ -3,7 +3,7 @@
 module CartridgeCore
   module Services
     module TreeState
-      class CommittalService < BaseService
+      class CommittalService < Services::Base
         def initialize(entity, changeset:, state:)
           @entity = ::CartridgeCore::Decorators::TreeStates::CommitableEntityDecorator.decorate(entity)
           @changeset = changeset

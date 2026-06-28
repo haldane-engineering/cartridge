@@ -14,7 +14,7 @@
 #  league_id   :integer
 #
 module Diderot
-  module NBA
+  module Nba
     class Player < ApplicationRecord
       self.table_name = 'diderot_nba_players'
     end
