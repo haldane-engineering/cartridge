@@ -4,6 +4,8 @@ module Diderot
   module Providers
     module Sportsradar
       class NBA
+        include Concerns::ExternalRequestCacheable
+
         CONFIG_KEYS = %i(
           team_class
           player_class
@@ -13,6 +15,7 @@ module Diderot
           timezone
           images_provider
           decorators
+          game_log_class
         ).freeze
         DISTRIBUTION_CHANNELS = %i(youtube).index_with(&:itself)
         HIGHLIGHTABLE_EVENT_TYPES = %w(twopointmade threepointmade).freeze
@@ -25,7 +28,7 @@ module Diderot
 
         def fetch_teams
           response = exec_request(URI("#{configuration.settings.dig(:base_url)}/league/teams.json"))
-          JSON.parse(response)
+          JSON.parse(response).dig('teams')
         end
 
         def fetch_team_profile(team)
@@ -84,20 +87,28 @@ module Diderot
           game.game_log.box_score.slice(*%w(away home)).values(&match_team)['points']
         end
 
-        def formatter = Formatter.new
+        def formatter = Formatter.new(configuration)
 
         def configuration
           @configuration ||= ProviderConfiguration.new(
             team_class: ::Diderot::Nba::Team,
             player_class: ::Diderot::Nba::Player,
             team_membership_class: ::Diderot::Nba::TeamMembership,
-            game_class: ::Dideror::Nba::Game.includes(*%i(home_team away_team)),
+            game_class: ::Diderot::Nba::Game.includes(*%i(home_team away_team)),
             game_log_class: ::Diderot::Nba::GameLog,
-            settings:,
+            settings: {
+              # store the api key securely
+              api_key:                   '9LWpuAoFoIkMm6bikYW5Qn4GKK8qacXzKJ1nejGy',
+              base_url:                  'https://api.sportradar.com/nba/trial/v8/en',
+              access_level:              :trial,
+              identifier_key:            'id',
+              exact_teams_count:         30,
+              min_team_membership_count: 12,
+            },
             timezone: 'US/Eastern',
-            images_provider: ::Diderot::Providers::Images::SportsDB.new,
+            images_provider: ::Diderot::Providers::Images::Sportsdb.new,
             decorators: {
-              team: Decorators::Nba::TeamDecorator,
+              team: ::Nba::TeamDecorator,
             },
           )
         end
@@ -114,37 +125,44 @@ module Diderot
 
         private
 
-        def exec_request(url, body)
-          http = Net::HTTP.new(url.host, url.port)
-          http.use_ssl = true
-          request = request_from_url(url)
-          http.request(request).read_body
+        # @param [String] uri - well, the uri.
+        # @param [Hash] body
+        # @return [String] the response json
+        def exec_request(uri, body = {}, **opts)
+          opts = api_request_defaults.merge(opts)
+          Rails.logger.info([uri, body, opts])
+          cache_key = [uri, body, opts].map(&:to_json).join('|')
+          success, body = cache_request(cache_key, &-> {
+            HTTParty.send(opts[:method], uri, opts.slice(:headers))
+          })
+          raise(ProviderTransportError, body) unless success
+
+          body
         end
 
-        def request_from_url(url)
-          Net::HTTP::Get.new(url).tap do |request|
-            request['x-api-key'] = configuration.dig(:api_key)
-            request['Content-Type'] = 'application/json'
-          end
+        def body_includable?(method) = %i(post put).include?(method)
+
+        def api_request_defaults
+          @api_request_defaults ||= {
+            method:       :get,
+            headers:      {
+              'Content-Type': 'application/json',
+              'x-api-key':    configuration.settings.dig(:api_key),
+            },
+            include_body: false,
+          }
         end
 
         def youtube_distribution?(channel) = channel == :youtube
 
-        def settings
-          @settings ||= {
-            # store the api key securely
-            api_key:                   'bKSHi5kiycfpXyjiHpDTRpHN6qq0oFUYrEbWmxfU',
-            base_url:                  'https://api.sportradar.com/nba/trial/v8/en',
-            access_level:              :trial,
-            identifier_key:            'id',
-            exact_teams_count:         30,
-            min_team_membership_count: 12,
-          }
-        end
-
         def highlightable_event_types = HIGHLIGHTABLE_EVENT_TYPES
 
+        # TODO: refactor to own file
         class Formatter
+          def initialize(configuration)
+            @configuration = configuration
+          end
+
           def box_score_attributes_from_json(box_score_json)
             persistable_keys = %w(name market id scoring leaders assists alias points)
             team_box_scores = box_score_json.slice(*%w(home away))
@@ -193,6 +211,10 @@ module Diderot
           end
 
           def internal_team_id_for(external_team_id) = ::Diderot::Nba::Team.find_by!(external_id: external_team_id)
+
+          private
+
+          attr_reader :configuration
         end
 
         ProviderConfiguration = Struct.new(*CONFIG_KEYS, keyword_init: true)
@@ -226,6 +248,8 @@ module Diderot
             end
           end
         end
+
+        class ProviderTransportError < StandardError; end
       end
     end
   end

@@ -191,9 +191,6 @@ module CartridgeCore
         factory_key = @klass.name.split('::').last.underscore.to_sym
         yaml_content = YAML.safe_load_file(Rails.root.join('lib/cartridge_core/cache/factory/samples.yml')).deep_symbolize_keys
         @klass.new(**yaml_content[factory_key])
-      rescue
-        require 'pry'
-        binding.pry
       end
     end
   end
