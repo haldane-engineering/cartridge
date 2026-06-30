@@ -5,8 +5,8 @@ module Diderot
     class TeamMembership < ApplicationRecord
       self.table_name = 'diderot_nba_team_memberships'
 
-      belongs_to :team, class_name: 'Diderot::NBA::Team'
-      belongs_to :player, class_name: 'Diderot::NBA::Player'
+      belongs_to :team, class_name: '::Diderot::Nba::Team'
+      belongs_to :player, class_name: '::Diderot::Nba::Player'
     end
   end
 end

@@ -7,36 +7,43 @@ module CartridgeCore
         class << self
           def call(*args) = new(*args).call
 
-          def execute_with_changeset_in_context(*args)
-            stop = new(*args)
+          # @param [Entities::TreeState] tree_state root/timeline tree state
+          # @param [Entities::Route] the parent route
+          # @param [Hash] opts including name and other relevant params
+          def execute_with_changeset_in_context(tree_state, route, **opts)
+            stop = new(tree_state, route, **opts)
             stop.call
           rescue StandardError => e
+            require 'pry'
+            binding.pry
             [nil, [*stop.errors, e]]
           end
         end
 
-        attr_reader :changeset, :errors
+        attr_reader(*%i(tree_state route name changeset errors))
 
-        def initialize(tree_state, route, *args)
+        def initialize(tree_state, route, **opts)
           @tree_state = tree_state
           @route = route
           @changeset = []
           @errors = []
+          @name = opts[:name]
         end
 
         private
 
-        attr_reader :tree_state, :route
-
         # add other helper methods
 
-        def respond_to_missing?(method_name, include_private = false) = method_name.starts_with?('changeset_') || super
+        def respond_to_missing?(method_name,
+          include_private = false)
+          method_name.starts_with?('changeset_') || super
+        end
 
         def method_missing(m_name, *args, **kwargs, &block)
           m_string = m_name.to_s
           if m_string.starts_with?('changeset_')
-            strategy = m_string.delete_prefix('changeset_')
-            changeset.push(::CatridgeCore::Entities::ChangeEntry.new(**kwargs.merge(strategy:)))
+            strategy = m_string.delete_prefix('changeset_').to_sym
+            changeset.push(::CartridgeCore::Entities::ChangeEntry.new(**kwargs.merge(strategy:)))
             [changeset, errors]
           else
             super

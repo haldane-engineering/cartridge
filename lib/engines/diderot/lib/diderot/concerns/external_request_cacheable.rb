@@ -21,10 +21,9 @@ module Diderot
           [response.success?, response.body]
         }
 
-        return Rails.cache.write(
-          cache_key,
-          yield_response.call,
-        ) if !cached_response_value || !cached_response_value.first
+        return yield_response.call.tap(&->(response) {
+          Rails.cache.write(cache_key, response)
+        }) if !cached_response_value || !cached_response_value.first
 
         cached_response_value
       end

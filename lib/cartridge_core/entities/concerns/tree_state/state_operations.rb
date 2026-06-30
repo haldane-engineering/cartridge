@@ -71,7 +71,7 @@ module CartridgeCore
             current_key = current.keys.find do |key|
               key.to_s.include?(target_key.to_s)
             end
-            [current_key, tree_state[current_key]]
+            [current_key, current[current_key]]
           end
         end
       end

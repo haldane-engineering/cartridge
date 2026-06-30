@@ -45,7 +45,7 @@ module CartridgeCore
 
       def reload!
         _, n_state = cache.load!(id)
-        ::CartridgeCore::Services::CacheActions::Load.apply(self, n_state)
+        ::CartridgeCore::Services::CacheActions::Load.apply!(self, n_state)
         self
       end
 

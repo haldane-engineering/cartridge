@@ -31,10 +31,10 @@ module Diderot
           JSON.parse(response).dig('teams')
         end
 
-        def fetch_team_profile(team)
-          path = "league/teams/#{team.external_id}/profile.json"
+        def fetch_team_players(team)
+          path = "teams/#{team.external_id}/profile.json"
           response = exec_request(URI("#{configuration.settings.dig(:base_url)}/#{path}"))
-          JSON.parse(response)
+          JSON.parse(response)['players']
         end
 
         def fetch_scheduled_games(date)
@@ -172,13 +172,13 @@ module Diderot
           def team_attributes_from_json(team_json)
             external_id = team_json.delete(configuration.settings.dig(:identifier_key))
             persistable_json = team_json.slice(*::Diderot::Nba::Team.attribute_names).compact
-            persistable_json.merge(external_id:, league_id: Nba.league.id)
+            persistable_json.merge(external_id:, league_id: ::Diderot::Leagues::Nba.league_id)
           end
 
           def player_attributes_from_json(player_json)
             external_id = player_json.delete(configuration.settings.dig(:identifier_key))
             persistable_json = player_json.slice(*::Diderot::Nba::Player.attribute_names).compact
-            persistable_json.merge(external_id:, league_id: Nba.league.id)
+            persistable_json.merge(external_id:, league_id: ::Diderot::Leagues::Nba.league_id)
           end
 
           def game_attributes_from_json(game_json)
@@ -193,7 +193,7 @@ module Diderot
               venue_name: game_json.dig(*%w(venue name)),
               home_team_id: internal_team_id_for(game_json.dig(*%w(home id))),
               away_team_id: internal_team_id_for(game_json.dig(*%w(away id))),
-              league_id: Nba.league.id,
+              league_id: ::Diderot::Leagues::Nba.league_id,
               metadata: { special_context_title: 'Full Highlights' },
             )
           end
