@@ -4,7 +4,18 @@ module CartridgeCore
   module Entities
     module Core
       class Stop
-        def self.call(*args) = new(*args).call
+        class << self
+          def call(*args) = new(*args).call
+
+          def execute_with_changeset_in_context(*args)
+            stop = new(*args)
+            stop.call
+          rescue StandardError => e
+            [nil, [*stop.errors, e]]
+          end
+        end
+
+        attr_reader :changeset, :errors
 
         def initialize(tree_state, route, *args)
           @tree_state = tree_state
@@ -13,17 +24,9 @@ module CartridgeCore
           @errors = []
         end
 
-        def apply_within_changeset_context(&block)
-          block.call
-          [changeset, errors]
-        # always fail silently
-        rescue StandardError => e
-          errors.push(e)
-        end
-
         private
 
-        attr_reader :tree_state, :route, :changeset, :errors
+        attr_reader :tree_state, :route
 
         # add other helper methods
 
@@ -34,7 +37,7 @@ module CartridgeCore
           if m_string.starts_with?('changeset_')
             strategy = m_string.delete_prefix('changeset_')
             changeset.push(::CatridgeCore::Entities::ChangeEntry.new(**kwargs.merge(strategy:)))
-            changeset
+            [changeset, errors]
           else
             super
           end

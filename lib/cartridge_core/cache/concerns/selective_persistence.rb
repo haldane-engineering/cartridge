@@ -35,7 +35,7 @@ module CartridgeCore
         end
 
         module ClassMethods
-          attr_reader :persistable_keys, index_key
+          attr_reader :persistable_keys, :index_key
 
           def persists!(*persistable_keys)
             @persistable_keys = persistable_keys

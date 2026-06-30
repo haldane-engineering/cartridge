@@ -3,7 +3,7 @@
 module Diderot
   module Providers
     module Images
-      class SportsDB
+      class Sportsdb
         include Concerns::ExternalRequestable
 
         def fetch_team_logo(full_name)

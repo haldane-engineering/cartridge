@@ -5,7 +5,7 @@ require 'digest'
 module CartridgeCore
   module Services
     module Merge
-      class Engine < BaseService
+      class Engine < Services::Base
         STRATEGIES = { add: :add, remove: :remove }
         class InvalidChangeEntryError < StandardError; end
 

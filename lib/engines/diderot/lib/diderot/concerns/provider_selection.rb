@@ -4,15 +4,15 @@ module Diderot
   module Concerns
     module ProviderSelection
       PROVIDER_MAP = {
-        nba: 'Providers::SportsRadar::NBA',
+        nba: 'Diderot::Providers::Sportsradar::NBA',
       }.freeze
 
       def provider
         @provider ||= begin
           provider_type = route.context.parameters.dig(:provider_type)
-          raise InvalidProviderError unless PROVIDER_MAP.key?(provider_type.to_sym)
-
-          PROVIDER_MAP.dig(route.context.parameters.dig(provider_type.to_sym)).constantize.new
+          PROVIDER_MAP[provider_type.to_sym].constantize.new if provider_type
+        rescue
+          raise InvalidProviderError
         end
       end
 

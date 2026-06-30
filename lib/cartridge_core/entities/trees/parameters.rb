@@ -3,7 +3,7 @@
 module CartridgeCore
   module Entities
     module Trees
-      Parameter = Struct.new(*%i(raw), keyword_init: true) do
+      Parameters = Struct.new(*%i(raw), keyword_init: true) do
         include ::CartridgeCore::Cache::Concerns::SelectivePersistence
 
         delegate :slice, to: :to_h

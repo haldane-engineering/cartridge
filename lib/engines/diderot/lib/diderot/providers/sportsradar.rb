@@ -2,8 +2,10 @@
 
 module Diderot
   module Providers
-    module SportsRadar
+    module Sportsradar
       class NBA
+        include Concerns::ExternalRequestCacheable
+
         CONFIG_KEYS = %i(
           team_class
           player_class
@@ -13,6 +15,7 @@ module Diderot
           timezone
           images_provider
           decorators
+          game_log_class
         ).freeze
         DISTRIBUTION_CHANNELS = %i(youtube).index_with(&:itself)
         HIGHLIGHTABLE_EVENT_TYPES = %w(twopointmade threepointmade).freeze
@@ -25,7 +28,7 @@ module Diderot
 
         def fetch_teams
           response = exec_request(URI("#{configuration.settings.dig(:base_url)}/league/teams.json"))
-          JSON.parse(response)
+          JSON.parse(response).dig('teams')
         end
 
         def fetch_team_profile(team)
@@ -84,20 +87,28 @@ module Diderot
           game.game_log.box_score.slice(*%w(away home)).values(&match_team)['points']
         end
 
-        def formatter = Formatter.new
+        def formatter = Formatter.new(configuration)
 
         def configuration
           @configuration ||= ProviderConfiguration.new(
-            team_class: ::Diderot::NBA::Team,
-            player_class: ::Diderot::NBA::Player,
-            team_membership_class: ::Diderot::NBA::TeamMembership,
-            game_class: ::Dideror::NBA::Game.includes(*%i(home_team away_team)),
-            game_log_class: ::Diderot::NBA::GameLog,
-            settings:,
+            team_class: ::Diderot::Nba::Team,
+            player_class: ::Diderot::Nba::Player,
+            team_membership_class: ::Diderot::Nba::TeamMembership,
+            game_class: ::Diderot::Nba::Game.includes(*%i(home_team away_team)),
+            game_log_class: ::Diderot::Nba::GameLog,
+            settings: {
+              # store the api key securely
+              api_key:                   '9LWpuAoFoIkMm6bikYW5Qn4GKK8qacXzKJ1nejGy',
+              base_url:                  'https://api.sportradar.com/nba/trial/v8/en',
+              access_level:              :trial,
+              identifier_key:            'id',
+              exact_teams_count:         30,
+              min_team_membership_count: 12,
+            },
             timezone: 'US/Eastern',
-            images_provider: ::Diderot::Providers::Images::SportsDB.new,
+            images_provider: ::Diderot::Providers::Images::Sportsdb.new,
             decorators: {
-              team: Decorators::NBA::TeamDecorator,
+              team: ::Nba::TeamDecorator,
             },
           )
         end
@@ -114,37 +125,44 @@ module Diderot
 
         private
 
-        def exec_request(url, body)
-          http = Net::HTTP.new(url.host, url.port)
-          http.use_ssl = true
-          request = request_from_url(url)
-          http.request(request).read_body
+        # @param [String] uri - well, the uri.
+        # @param [Hash] body
+        # @return [String] the response json
+        def exec_request(uri, body = {}, **opts)
+          opts = api_request_defaults.merge(opts)
+          Rails.logger.info([uri, body, opts])
+          cache_key = [uri, body, opts].map(&:to_json).join('|')
+          success, body = cache_request(cache_key, &-> {
+            HTTParty.send(opts[:method], uri, opts.slice(:headers))
+          })
+          raise(ProviderTransportError, body) unless success
+
+          body
         end
 
-        def request_from_url(url)
-          Net::HTTP::Get.new(url).tap do |request|
-            request['x-api-key'] = configuration.dig(:api_key)
-            request['Content-Type'] = 'application/json'
-          end
+        def body_includable?(method) = %i(post put).include?(method)
+
+        def api_request_defaults
+          @api_request_defaults ||= {
+            method:       :get,
+            headers:      {
+              'Content-Type': 'application/json',
+              'x-api-key':    configuration.settings.dig(:api_key),
+            },
+            include_body: false,
+          }
         end
 
         def youtube_distribution?(channel) = channel == :youtube
 
-        def settings
-          @settings ||= {
-            # store the api key securely
-            api_key:                   'bKSHi5kiycfpXyjiHpDTRpHN6qq0oFUYrEbWmxfU',
-            base_url:                  'https://api.sportradar.com/nba/trial/v8/en',
-            access_level:              :trial,
-            identifier_key:            'id',
-            exact_teams_count:         30,
-            min_team_membership_count: 12,
-          }
-        end
-
         def highlightable_event_types = HIGHLIGHTABLE_EVENT_TYPES
 
+        # TODO: refactor to own file
         class Formatter
+          def initialize(configuration)
+            @configuration = configuration
+          end
+
           def box_score_attributes_from_json(box_score_json)
             persistable_keys = %w(name market id scoring leaders assists alias points)
             team_box_scores = box_score_json.slice(*%w(home away))
@@ -153,18 +171,18 @@ module Diderot
 
           def team_attributes_from_json(team_json)
             external_id = team_json.delete(configuration.settings.dig(:identifier_key))
-            persistable_json = team_json.slice(*::Diderot::NBA::Team.attribute_names).compact
-            persistable_json.merge(external_id:, league_id: NBA.league.id)
+            persistable_json = team_json.slice(*::Diderot::Nba::Team.attribute_names).compact
+            persistable_json.merge(external_id:, league_id: Nba.league.id)
           end
 
           def player_attributes_from_json(player_json)
             external_id = player_json.delete(configuration.settings.dig(:identifier_key))
-            persistable_json = player_json.slice(*::Diderot::NBA::Player.attribute_names).compact
-            persistable_json.merge(external_id:, league_id: NBA.league.id)
+            persistable_json = player_json.slice(*::Diderot::Nba::Player.attribute_names).compact
+            persistable_json.merge(external_id:, league_id: Nba.league.id)
           end
 
           def game_attributes_from_json(game_json)
-            game_json.slice(*Diderot::NBA::Game.attribute_names).compact.merge(
+            game_json.slice(*Diderot::Nba::Game.attribute_names).compact.merge(
               scheduled_at: game_json['scheduled'],
               external_id: game_json['id'],
               external_reference_id: game_json['sr_id'],
@@ -175,7 +193,7 @@ module Diderot
               venue_name: game_json.dig(*%w(venue name)),
               home_team_id: internal_team_id_for(game_json.dig(*%w(home id))),
               away_team_id: internal_team_id_for(game_json.dig(*%w(away id))),
-              league_id: NBA.league.id,
+              league_id: Nba.league.id,
               metadata: { special_context_title: 'Full Highlights' },
             )
           end
@@ -185,14 +203,18 @@ module Diderot
             match_relevant_events = ->(event) {
               configuration.settings.dig(:persistable_game_log_event_types).include?(event['event_type'])
             }
-            game_log_json.slice(*Diderot::NBA::GameLog.attribute_names).merge(
+            game_log_json.slice(*Diderot::Nba::GameLog.attribute_names).merge(
               game_id: game.id,
               raw_json: game_log_json.merge(events: game_log_json.dig('events').select(&match_relevant_events)),
               external_id:,
             )
           end
 
-          def internal_team_id_for(external_team_id) = ::Diderot::NBA::Team.find_by!(external_id: external_team_id)
+          def internal_team_id_for(external_team_id) = ::Diderot::Nba::Team.find_by!(external_id: external_team_id)
+
+          private
+
+          attr_reader :configuration
         end
 
         ProviderConfiguration = Struct.new(*CONFIG_KEYS, keyword_init: true)
@@ -208,7 +230,7 @@ module Diderot
               def title_components(game)
                 [
                   game.participants.map(&:full_name).join(' vs '),
-                  game.meta('special_context.title'), # e.g NBA finals will have special context 'NBA Finals Game 1'
+                  game.meta('special_context.title'), # e.g Nba finals will have special context 'Nba Finals Game 1'
                   "| #{game.scheduled_at.strftime("%B %-d, %Y")}",
                 ].join(', ')
               end
@@ -219,13 +241,15 @@ module Diderot
                 }).merge(
                   **game_specific_keys.index_with(&->(key) { game.meta("distributions.youtube.#{key}") }),
                   file_path: game.output_video_path,
-                  # e.g San Antonio Spurs vs New York Knicks Full Game 2 Highlights - June 5, 2026 | NBA Finals
+                  # e.g San Antonio Spurs vs New York Knicks Full Game 2 Highlights - June 5, 2026 | Nba Finals
                   title: title_components(game),
                 ))
               end
             end
           end
         end
+
+        class ProviderTransportError < StandardError; end
       end
     end
   end

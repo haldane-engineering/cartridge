@@ -3,7 +3,7 @@
 module CartridgeCore
   module Services
     module Stops
-      class Applicator < BaseService
+      class Applicator < Services::Base
         include ::CartridgeCore::Errors::DynamicPropagation
 
         def self.apply!(stop)
@@ -24,23 +24,26 @@ module CartridgeCore
           # check class should be able to make all the necessary sanity checks on the state but allow
           # TODO - stop checks should ensure that the parameters defined in the definitions yml are
           # present in the route's parameters.
-          check_errors = stop.checks(&method(:initialize_check)).map(&:apply!)
+          check_errors = stop.checks.map(&->(check) {
+            check.validate_entity_state_with_changeset!(route.tree_state)
+          })
           return fail!(stop, :stop_application_error, check_errors.map(&:message)) if check_errors.any?
 
           # stop_class_here is the the stop defined in the main application -> e.g diderot::stops::available_games
-          stop_class = "#{route.name}/#{stop.name}".camelize.constantize
-          stop_class.include(::CartridgeCore::Entities::Stops::Cartridges::ProcessPropagation) if stop.spawns_processes?
+          stop_class = stop.class_name.camelize.constantize
+          stop_class.include(::CartridgeCore::Entities::Stops::Cartridges::ProcessProgagation) if stop.spawns_processes?
           stop_class.include(::CartridgeCore::Entities::Stops::Cartridges::ScheduleExecution) if stop.schedules_execution?
           # route.context.parameters.dig(stop.name) -> will yield list of passed params for the stop.
-          changeset, errors = stop_class.apply_within_changeset_context(-> {
-            stop_class.call(route.tree_state.current, route)
-          })
-          return fail!(stop, :stop_application_error, errors.map(&:message)) if errors.any?
+          executor_args = [route.tree_state, route]
+          changeset, errors = stop_class.execute_with_changeset_in_context(*executor_args)
+          return fail!(stop, :stop_application_error, errors) if errors.present?
 
-          balancer_errors = populate_balancers(changeset).map(&:apply!)
+          balancer_errors =  stop.balancers.map(&->(balancer) {
+            balancer.validate_entity_state_with_changeset!(route.tree_state)
+          })
           return fail!(stop, :stop_application_error, balancer_errors.map(&:message)) if balancer_errors.any?
 
-          stop.using_context(context).assign_changeset(changeset)
+          stop.with_context(context).assign_changeset(changeset)
         rescue NameError
           halt!(:missing_stop_applicator_error)
         ensure
@@ -49,12 +52,21 @@ module CartridgeCore
 
         private
 
-        attr_reader :tree_state, :route, :stop
+        delegate :route, to: :stop
+
+        attr_reader :tree_state, :stop
 
         def initialize_check(check_class)
           "#{stop.route.name.camelize}::Checks::#{check.camelize}".constantize.new(
             stop, stop.route.tree_state.current
           )
+        end
+
+        # @return [Array<Error>]
+        def apply_guard_constraints!(guards)
+          guargs.map(&->(balancer) {
+            balancer.validate_entity_state_with_changeset!(route.tree_state)
+          })
         end
 
         def populate_balancers(changeset)

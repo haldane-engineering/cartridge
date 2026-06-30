@@ -14,20 +14,22 @@ module Diderot
             # hash to get the folder when the source video is stored
             video_paths = composable_game_ids.map(&->(log) { Digest::SHA256.hexdigest(log.game_id) })
             composable_game_ids.zip(video_paths).each do |(game_id, dir_path)|
-              # I know - there's a repetition here, optimize after completion
-              # game_log = provider.game_log_class.find_by(game_id: game_id)
+              # dir_path here is the hashed id of the game - which serves as a store for all the files
+              # during the composition process -> at this point the preceeding stop (source_population#game_replays_retriever)
+              # should have populated it with the source file.
               source_file = File.expand_path(Dir.glob(File.join(dir_path, '*')).select { |f| File.file?(f) }.first)
+              chunks_dir = FileUtils.mkdir_p("#{dir_path}/fragments")
+              game_logs = JSON.parse(provider.game_log_class.find_by(game_id: game_id))
               # preselect the events: the preselection should return a list of Fragment objects
               # for nba highlights, I imagine we add a padding: 10 seconds after the previous event.
               # and 5 seconds into the next. These numbers should be configurable.
               # The current implementation naively adds 5 seconds pre and 3 seconds post event, which might work for now
-              # but to make the highlights more fleshy, I imagine we want to change this
-              chunks_dir = FileUtils.mkdir_p("#{dir_path}/fragments")
-              game_logs = JSON.parse(provider.game_log_class.find_by(game_id: game_id))
-              # see notes on the various options here
-              # https://www.baeldung.com/linux/ffmpeg-cutting-videos
-              # https://medium.com/@taylorjdawson/splitting-a-video-with-ffmpeg-the-great-mystical-magical-video-tool-%EF%B8%8F-1b31385221bd
+              # but to make the highlights more fleshy, I imagine we want to change this. TODO: Add padding to start and end
+              # each fragment
               fragments = provider.generate_highlight_fragments(game_logs, Fragment).each do |fragment|
+                # see notes on the various options here
+                # https://www.baeldung.com/linux/ffmpeg-cutting-videos
+                # https://medium.com/@taylorjdawson/splitting-a-video-with-ffmpeg-the-great-mystical-magical-video-tool-%EF%B8%8F-1b31385221bd
                 output, _, status = py_exec(
                   <<~cmd,
                     ffmpeg -i #{source_file} -ss #{fragment.start} -t #{fragment.end} \
@@ -35,6 +37,9 @@ module Diderot
                     -async 1 #{File.expand_path(chunks_dir)}/#{fragment.title.underscore}.mp4
                   cmd
                 )
+                # Idea here is that each highlightable event at this point of execution, has been spawn out to the destination folder.
+                # we can conveniently write to the manifest the matching event title name and it cna then be found and added to the composition
+                # queue.
                 fragment.set(success: status.success?, output:)
               end
               manifest_path = "#{dir_path}/manifest.txt"

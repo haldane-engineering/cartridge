@@ -3,7 +3,7 @@
 module CartridgeCore
   module Services
     module TreeState
-      class RollbackService < BaseService
+      class RollbackService < Services::Base
         include ::CartridgeCore::Errors::DynamicPropagation
 
         def initialize(tree_state, **opts)

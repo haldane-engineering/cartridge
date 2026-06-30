@@ -1,7 +1,7 @@
 # frozen_string_literal: true
 
 module Diderot
-  module NBA
+  module Nba
     class Game < ApplicationRecord
       self.table_name = 'diderot_nba_games'
 

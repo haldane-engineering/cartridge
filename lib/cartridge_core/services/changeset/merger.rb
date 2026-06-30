@@ -3,7 +3,7 @@
 module CartridgeCore
   module Services
     module Changeset
-      class Merger < BaseService
+      class Merger < Services::Base
         include CartridgeCore::Errors::Concerns::DynamicErrorPropagation
 
         def self.call(*args)

@@ -24,10 +24,12 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'capybara', '~>3.1.0'
   spec.add_dependency 'concurrent-ruby', '1.3.4'
   spec.add_dependency 'concurrent-ruby-ext'
+  spec.add_dependency 'httparty', '0.24.2'
   spec.add_dependency 'nokogiri', '~> 1.19', '>= 1.19.3'
   spec.add_dependency 'open3', '~> 0.2.1'
   spec.add_dependency 'pg', '~> 1.6'
   spec.add_dependency 'pry', '~> 0.14.2'
   spec.add_dependency 'rails', '~> 6.1.7', '>= 6.1.7.10'
+  spec.add_dependency 'redis', '~> 4.0'
   spec.add_dependency 'selenium-webdriver', '4.44.0'
 end

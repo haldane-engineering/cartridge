@@ -23,7 +23,7 @@ module CartridgeCore
       head
       execution_state
       context
-      scheduled_executions
+      scheduled_timeline_executions
       stop_processes
       stop_process_units
     )

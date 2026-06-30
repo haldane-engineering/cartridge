@@ -2,11 +2,26 @@
 
 module CartridgeCore
   module Entities
-    STOP_KEYS = %i(applied changeset name route checks balancers index parameters spawns_processes)
+    STOP_KEYS = %i(
+      applied
+      changeset
+      name
+      route
+      checks
+      balancers
+      index
+      parameters
+      spawns_processes
+      schedulable
+      schedules_execution
+      class_name
+      context
+    )
     Stop = Struct.new(*STOP_KEYS, keyword_init: true) do
       include CartridgeCore::Services::EventBus::Concerns::Propagation
       include CartridgeCore::Cache::Concerns::SelectivePersistence
       include CartridgeCore::Entities::Concerns::StateIntegrityEnforcement::Core
+      include CartridgeCore::Entities::Stops::Cartridges::Enablement
 
       persists!(*%i(applied name changeset))
 
@@ -14,13 +29,13 @@ module CartridgeCore
         new(*args).apply!
       end
 
-      def using_context(context)
-        @context = context
+      def with_context(context)
+        self.context ||= context
         self
       end
 
       def assign_changeset(changeset)
-        @changeset = changeset
+        self.changeset = changeset
         self
       end
 
