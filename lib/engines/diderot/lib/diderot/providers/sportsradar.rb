@@ -104,6 +104,9 @@ module Diderot
               identifier_key:            'id',
               exact_teams_count:         30,
               min_team_membership_count: 12,
+              request_buffer:            10.seconds,
+              # TODO: - find the league defined values for this.
+              team_memberships_range:    (12..50),
             },
             timezone: 'US/Eastern',
             images_provider: ::Diderot::Providers::Images::Sportsdb.new,

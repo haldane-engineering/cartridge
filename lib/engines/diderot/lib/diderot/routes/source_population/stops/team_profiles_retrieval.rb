@@ -6,38 +6,27 @@ module Diderot
       module Stops
         class TeamProfilesRetrieval < ::Diderot::Routes::ApplicableStop
           def call
-            # teams = ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql(
-            #   <<~SQL,
-            #     SELECT teams.id, count(memberships.id) as p_count
-            #     from #{provider.team_class.table_name} teams
-            #     inner join #{provider.team_membership_class.table_name} as memberships on memberships.team_id = teams.id
-            #     group by teams.id
-            #   SQL
-            # ))
-            available_teams_in_state = route_state_get(:available_team_ids)
-            provider.fetch_teams.each do |team_json|
-              team = provider.team_class.find_or_create_by(
-                **provider.formatter.team_attributes_from_json(team_json),
-              )
-              populate_team_players!(team)
-              changeset_add(key: :available_team_ids, value: [*available_teams_in_state, team.id])
+            # take the first 5 for now
+            provider.fetch_teams.slice(0, 5).each do |team_json|
+              provider.team_class.find_or_create_by(**provider.formatter.team_attributes_from_json(team_json)).tap do |team|
+                populate_team_players!(team)
+              end unless team_already_populated?(team_json)
             end
-            teams = provider.team_class.all
-            # Populate the logos and player images
-            spawn_processes!(
-              [-> {
-                Processes::TeamMembershipsProfilePopulationProcess.spawn!(teams, provider)
-              }],
-              blocking: false,
-            )
-            changeset_add(key: :team_ids, value: teams.ids)
+            spawn_processes!([-> { populate_memberships_with_context! }], blocking: false)
+            changeset_add(key: :available_team_ids, value: teams.ids)
           end
 
           private
 
-          def teams_already_populated?(teams)
-            team_membership_limit = ->(num) { num >= provider.settings.dig(:min_team_membership_count) }
-            teams.count == provider.settings.dig(:exact_teams_count) && teams.map(&:last).all?(&team_membership_limit)
+          def team_already_populated?(team_json)
+            teams_with_members_count.any?(&->(team_obj) {
+              team_obj['external_id'] == team_json[provider.settings[:identifier_key]] &&
+              provider.settings[:team_memberships_range].cover?(team_obj['player_count'])
+            })
+          end
+
+          def populate_memberships_with_context!
+            Processes::TeamMembershipsProfilePopulationProcess.spawn!(teams, provider)
           end
 
           def populate_team_players!(team)
@@ -46,6 +35,18 @@ module Diderot
               player = provider.player_class.find_or_create_by(**player_attributes)
               provider.team_membership_class.create!(player:, team:)
             end
+            sleep provider.settings[:request_buffer] if provider.settings[:request_buffer]
+          end
+
+          def teams_with_members_count
+            @teams_with_members_count ||= ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql(
+              <<~SQL,
+                SELECT DISTINCT(teams.id), teams.external_id, count(memberships.id) as player_count
+                FROM #{provider.team_class.table_name} teams
+                INNER JOIN #{provider.team_membership_class.table_name} as memberships on memberships.team_id = teams.id
+                GROUP BY teams.id
+              SQL
+            )).to_a
           end
         end
       end

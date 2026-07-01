@@ -37,6 +37,7 @@ module CartridgeCore
       commits
       main
       stop_processes
+      stop_process_units
       scheduled_timeline_executions
       head
       parameters

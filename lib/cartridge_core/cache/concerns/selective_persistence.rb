@@ -16,13 +16,20 @@ module CartridgeCore
         end
 
         def persist!
-          key = self.class.index_key.to_sym
-          record_set = route.timeline.send(key)
-          index = record_set.find_index { |record| record.id == id }
-          index ? record_set[index] = self : record_set.unshift(self)
+          object_key = self.class.index_key.to_sym
+          object_records = route.timeline.send(object_key)
+          index = object_records.find_index { |record| record.id == id }
+          index ? object_records[index] = self : object_records.unshift(self)
           match = ->(r_json) { r_json.dig(:id) == id }
-          route.timeline.tree_state.send(key).unshift({ id: }) unless route.timeline.tree_state.find(&match)
-          route.timeline.persist!
+          state_entries = route.timeline.tree_state.send(object_key) || []
+          state_entries.unshift({ id: }) unless state_entries.find(&match)
+          route.timeline.tree_state.send(:"#{object_key}=", state_entries)
+          # This is a suboptimal implementation, the initial plan was to always use a
+          # commit to update tree state -> but I will refactor this method to take in
+          # a version params which gets propagated as the head of the tree.
+          # alternatively I could make the version optional.
+          version_signature = Digest::SHA256.hexdigest(route.timeline.tree_state.as_json)[(0..8)]
+          route.timeline.persist!(version_signature)
         end
 
         # alias_method :as_json, :persistable_state
