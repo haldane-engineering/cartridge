@@ -4,10 +4,19 @@ module CartridgeCore
   module Cache
     module Concerns
       module SelectivePersistence
-        def self.included(klass) = klass.extend(ClassMethods)
+        using CartridgeCore::Refinements::HashRefinement
+
+        def self.included(klass)
+          klass.extend(ClassMethods)
+        end
 
         def persistable_state
-          self.class.persistable_keys.present? ? as_json.slice(*self.class.persistable_keys.map(&:to_s)) : as_json
+          @persistable_state ||= begin
+            root_state = self.class.persistable_keys.present? ? to_h.slice(*self.class.persistable_keys) : to_h
+            root_state.deep_transform(&->(value) {
+              value.respond_to?(:persistable_state) ? value.to_h.slice(*value.class.persistable_keys) : value
+            })
+          end
         end
 
         def set(**attributes)
@@ -28,8 +37,10 @@ module CartridgeCore
           # commit to update tree state -> but I will refactor this method to take in
           # a version params which gets propagated as the head of the tree.
           # alternatively I could make the version optional.
-          version_signature = Digest::SHA256.hexdigest(route.timeline.tree_state.as_json)[(0..8)]
-          route.timeline.persist!(version_signature)
+          route.timeline.persist!(
+            route.timeline.tree_state.generate_commit_identifier,
+            route.timeline.tree_state.current,
+          )
         end
 
         # alias_method :as_json, :persistable_state

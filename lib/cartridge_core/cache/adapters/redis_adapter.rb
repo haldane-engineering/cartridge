@@ -151,6 +151,13 @@ module CartridgeCore
             association_record
           end
           timeline[association_key] = fully_populated_association_entries.compact
+          configuration[:hash_state_entries].each do |(attribute_key, value)|
+            next if timeline[attribute_key].is_a?(Hash) # why are there different types? - TODO
+
+            timeline[attribute_key] = timeline[attribute_key].index_by(&->(state_entry) {
+              state_entry[value]
+            })
+          end
           timeline
         end
 
@@ -173,6 +180,7 @@ module CartridgeCore
             default_cursor_offset: 0,
             full_key_set:          %i(timelines trees) + root_idx_keys,
             empty_index_response:  '[]',
+            hash_state_entries:    { trees: 'id' },
           }
         end
 

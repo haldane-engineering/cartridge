@@ -37,15 +37,21 @@ module CartridgeCore
 
       def self.base_keys = BASE_KEYS
 
+      # @param [String | Integer] version the version number for this new tree
+      # tree
       def persist!(version, tree = nil)
-        persistable_state = persistable_state[:trees].merge("#{version}": tree) if tree
-        cache.snapshot!(id, persistable_state)
+        # persistable_state[:trees] is a list of tree_states, when fetching from the cache
+        # during the association population step -> trees returns as an array but during tree snapshotting
+        # it expects a hash -> this is a design flaw I need to address.
+        persistable_tree_state = persistable_state[:trees].merge("#{version}": tree) if tree
+        self.head = version
+        cache.snapshot!(id, persistable_tree_state)
         reload!
       end
 
       def reload!
         _, n_state = cache.load!(id)
-        ::CartridgeCore::Services::CacheActions::Load.apply!(self, n_state)
+        ::CartridgeCore::Services::CacheAtreections::Load.apply!(self, n_state)
         self
       end
 
