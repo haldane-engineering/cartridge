@@ -37,12 +37,14 @@ module CartridgeCore
       commits
       main
       stop_processes
+      stop_process_units
       scheduled_timeline_executions
       head
       parameters
       definition_id
       routes
     ]
+    COMMIT_ID_SLICING_RANGE = (0..8)
     # Examp
     TreeState = Struct.new(*STATE_KEYS, keyword_init: true) do
       include ::CartridgeCore::Entities::Concerns::TreeState::StateOperations
@@ -52,6 +54,12 @@ module CartridgeCore
         # for now we're just going to write to cache
         # we'll send this to the various database engines and
         # build a reader from that
+      end
+
+      # @return [String]
+      def generate_commit_identifier
+        Digest::SHA256.hexdigest(current.to_json + definition_id)
+        [COMMIT_ID_SLICING_RANGE]
       end
     end
   end

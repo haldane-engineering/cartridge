@@ -4,10 +4,19 @@ module CartridgeCore
   module Cache
     module Concerns
       module SelectivePersistence
-        def self.included(klass) = klass.extend(ClassMethods)
+        using CartridgeCore::Refinements::HashRefinement
+
+        def self.included(klass)
+          klass.extend(ClassMethods)
+        end
 
         def persistable_state
-          self.class.persistable_keys.present? ? as_json.slice(*self.class.persistable_keys.map(&:to_s)) : as_json
+          @persistable_state ||= begin
+            root_state = self.class.persistable_keys.present? ? to_h.slice(*self.class.persistable_keys) : to_h
+            root_state.deep_transform(&->(value) {
+              value.respond_to?(:persistable_state) ? value.to_h.slice(*value.class.persistable_keys) : value
+            })
+          end
         end
 
         def set(**attributes)
@@ -16,13 +25,22 @@ module CartridgeCore
         end
 
         def persist!
-          key = self.class.index_key.to_sym
-          record_set = route.timeline.send(key)
-          index = record_set.find_index { |record| record.id == id }
-          index ? record_set[index] = self : record_set.unshift(self)
+          object_key = self.class.index_key.to_sym
+          object_records = route.timeline.send(object_key)
+          index = object_records.find_index { |record| record.id == id }
+          index ? object_records[index] = self : object_records.unshift(self)
           match = ->(r_json) { r_json.dig(:id) == id }
-          route.timeline.tree_state.send(key).unshift({ id: }) unless route.timeline.tree_state.find(&match)
-          route.timeline.persist!
+          state_entries = route.timeline.tree_state.send(object_key) || []
+          state_entries.unshift({ id: }) unless state_entries.find(&match)
+          route.timeline.tree_state.send(:"#{object_key}=", state_entries)
+          # This is a suboptimal implementation, the initial plan was to always use a
+          # commit to update tree state -> but I will refactor this method to take in
+          # a version params which gets propagated as the head of the tree.
+          # alternatively I could make the version optional.
+          route.timeline.persist!(
+            route.timeline.tree_state.generate_commit_identifier,
+            route.timeline.tree_state.current,
+          )
         end
 
         # alias_method :as_json, :persistable_state

@@ -14,8 +14,13 @@ module CartridgeCore
           tree.tree_state = tree.trees.find(&->(tree) { tree.id == tl_state[:head].to_s })
           # build state for each of the contained routes
           tree.routes.each do |route|
+            # To keep the routes and their contained stops completely isolated and independent of each other
+            # We prepend the route name to the state entry key; such that when building the route we assert it's
+            # appropriate state keys with a name check on each key.
+            route_tree_state = tree.tree_state.dup
             route_slice_keys = tree.tree_state.current.keys.keep_if { |k| k.to_s.include?(route.name.to_s) }
-            route.tree_state = tree.tree_state.current.slice(*route_slice_keys)
+            route_tree_state.current = tree.tree_state.current.slice(*route_slice_keys)
+            route.tree_state = route_tree_state
           end
           tree
         end

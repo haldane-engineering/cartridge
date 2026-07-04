@@ -29,13 +29,13 @@ module CartridgeCore
           })
           return fail!(stop, :stop_application_error, check_errors.map(&:message)) if check_errors.any?
 
-          # stop_class_here is the the stop defined in the main application -> e.g diderot::stops::available_games
-          stop_class = stop.class_name.camelize.constantize
-          stop_class.include(::CartridgeCore::Entities::Stops::Cartridges::ProcessProgagation) if stop.spawns_processes?
-          stop_class.include(::CartridgeCore::Entities::Stops::Cartridges::ScheduleExecution) if stop.schedules_execution?
+          # executor_class here is the the stop defined in the main application -> e.g diderot::stops::available_games
+          executor_class = stop.class_name.camelize.constantize
+          executor_class.include(::CartridgeCore::Entities::Stops::Cartridges::ProcessProgagation) if stop.spawns_processes?
+          executor_class.include(::CartridgeCore::Entities::Stops::Cartridges::ScheduleExecution) if stop.schedules_execution?
           # route.context.parameters.dig(stop.name) -> will yield list of passed params for the stop.
           executor_args = [route.tree_state, route]
-          changeset, errors = stop_class.execute_with_changeset_in_context(*executor_args)
+          changeset, errors = executor_class.execute_with_changeset_in_context(*executor_args, name: stop.name)
           return fail!(stop, :stop_application_error, errors) if errors.present?
 
           balancer_errors =  stop.balancers.map(&->(balancer) {

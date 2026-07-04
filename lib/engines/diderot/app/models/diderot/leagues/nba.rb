@@ -3,6 +3,11 @@
 module Diderot
   module Leagues
     class Nba < Diderot::League
+      class << self
+        def league_id
+          @@id ||= first.id
+        end
+      end
     end
   end
 end
