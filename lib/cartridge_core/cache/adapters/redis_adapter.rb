@@ -29,7 +29,7 @@ module CartridgeCore
           # remember: the root timeline only contains references
           # so we populate all root entries, e.g -> { id: 1234, head: 1243, commits: [2323, 23343], trees }
           #  becomes { ...rest_of_hash, commits: [{ id: 2323, ...rest_of_commit_body }] }
-          load_opts[:eager_load_keys].each do |association_key|
+          root_idx_keys.each do |association_key|
             populate_timeline_associations_using_cursor!(
               timeline,
               association_key,
@@ -43,7 +43,6 @@ module CartridgeCore
         def snapshot!(*args)
           # persist definitions, events, commits,
           extract_and_persist_root_indices!(*args)
-          persist_tree_head!(*args)
           persist_timeline!(*args)
         rescue
           # propagate the error here
@@ -96,21 +95,26 @@ module CartridgeCore
 
         def extract_values_and_persist!(args)
           idx_key, _, tree_state = args.flatten
+          # If the index contains any associational references, replace them with ids
           tree_state[idx_key].each do |idx_entry|
+            root_idx_keys.each do |key|
+              idx_entry[key] = idx_entry[key].map(&:deep_symbolize_keys).pluck(:id) if idx_entry.key?(key)
+            end if configuration[:eager_loadable_indices].include?(idx_key)
             storable_key = "$.#{idx_key}.#{idx_entry.deep_symbolize_keys.dig(:id)}"
             redis.call('JSON.SET', root_w_namespace, storable_key, idx_entry.to_json)
           end
         end
 
-        def persist_tree_head!(_, tree_state)
+        def persist_trees!(_, tree_state)
           # whenever there's a new version of state, the head of the timeline changes. At this point, we get the most
           # recent tree version and persist that to the global tree object - making sure to replace contained objects
           # with reference ids
-          tree = tree_state.dig(:trees, :"#{tree_state[:head]}")
-          root_idx_keys.each do |key|
-            tree[key] = tree_state[key].map(&:deep_symbolize_keys).pluck(:id) if tree.key?(key)
+          tree_state[:trees].each do |tree|
+            root_idx_keys.each do |key|
+              tree[key] = tree_state[key].map(&:deep_symbolize_keys).pluck(:id) if tree.key?(key)
+            end
+            redis.call('JSON.SET', root_w_namespace, "$.trees.#{tree.deep_symbolize_keys[:id]}", tree.to_json)
           end
-          redis.call('JSON.SET', root_w_namespace, "$.trees.#{tree_state.dig(:head)}", tree.to_json)
         end
 
         def persist_timeline!(timeline_id, timeline_tree)
@@ -126,7 +130,6 @@ module CartridgeCore
             compound_association_ids = [*timeline_tree[key], *timeline[key]].compact.pluck(:id)
             timeline[key] = compound_association_ids.map(&:to_s).uniq
           end
-          timeline[:trees] = [timeline_tree.dig(:head), *(timeline[:trees]&.keys || [])]
           redis.call('JSON.SET', root_w_namespace, "$.timelines.#{timeline_id}", timeline.to_json)
         end
 
@@ -142,22 +145,14 @@ module CartridgeCore
 
             # this naively (have to address later) assumes that associations can only be two tiers deep i.e
             # { timeline: { trees: [{ commits: [commit_id] }], commits: [commit] } }
-            eager_load_intersection.each do |eload_key|
+            eager_load_intersection.map(&:to_s).each do |eload_key|
               association_record[eload_key] = populate_timeline_association_from_cache(
                 association_record[eload_key], eload_key, limit, offset
               ) if association_record[eload_key].present?
             end
-
             association_record
           end
           timeline[association_key] = fully_populated_association_entries.compact
-          configuration[:hash_state_entries].each do |(attribute_key, value)|
-            next if timeline[attribute_key].is_a?(Hash) # why are there different types? - TODO
-
-            timeline[attribute_key] = timeline[attribute_key].index_by(&->(state_entry) {
-              state_entry[value]
-            })
-          end
           timeline
         end
 
@@ -175,12 +170,12 @@ module CartridgeCore
 
         def configuration
           @configuration ||= {
-            root_namespace:        :catridgecore,
-            default_cursor_limit:  1000,
-            default_cursor_offset: 0,
-            full_key_set:          %i(timelines trees) + root_idx_keys,
-            empty_index_response:  '[]',
-            hash_state_entries:    { trees: 'id' },
+            root_namespace:         :catridgecore,
+            default_cursor_limit:   1000,
+            default_cursor_offset:  0,
+            full_key_set:           %i(timelines trees) + root_idx_keys,
+            empty_index_response:   '[]',
+            eager_loadable_indices: %i(trees),
           }
         end
 
@@ -191,11 +186,13 @@ module CartridgeCore
         def root_idx_keys
           @root_idx_keys ||= %i(
             definitions
+            trees
             commits
             events
             stop_processes
             stop_process_units
             scheduled_timeline_executions
+
           )
         end
 
@@ -203,7 +200,7 @@ module CartridgeCore
           @base_load_opts = {
             only:            [],
             except:          [],
-            eager_load_keys: root_idx_keys.unshift(:trees),
+            eager_load_keys: root_idx_keys,
             cursor:          {
               limit:  configuration[:default_cursor_limit],
               offset: configuration[:default_cursor_offset],

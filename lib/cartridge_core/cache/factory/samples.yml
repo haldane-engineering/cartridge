@@ -29,6 +29,22 @@ parameter:
         - hello: world
           usable: true
         - testing: this
+tree_state:
+  routes: []
+  commits: []
+  final: null
+  scheduled_timeline_executions: []
+  head: null
+  definition_id: null
+  parameters: null
+  stop_processes: []
+  stop_process_units: []
+  main: null
+  version: null
+  changes: []
+  current: null
+  final: null
+  version: null
 stop_process: # for processes
   id: rp_99
   stop_name: game_replays_retrieval

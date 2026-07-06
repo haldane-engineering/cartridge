@@ -39,6 +39,7 @@ module CartridgeCore
 
     def initialize(adapter_type: :redis)
       @adapter = adapters[adapter_type].new(:cartridge)
+      @factory = Factory.new
       adapter.setup!
     end
 
@@ -69,15 +70,29 @@ module CartridgeCore
     attr_reader :adapter
 
     def setup_initial_timeline!(definition_id, definition_json)
-      timeline_tree = initial_timeline_tree(definition_id, definition_json)
+      initial_tree_state = @factory.build(::CartridgeCore::Entities::TreeState, attributes_only: true)
+      version_id = Factory.initial_timestamp.to_s
+      tree_state = initial_tree_state.merge(**initial_tree_state_args(version_id, definition_id))
+      timeline_tree = initial_timeline_tree(definition_id, definition_json, tree_state:)
       snapshot!(definition_id, timeline_tree)
       adapter.load!(timeline_tree[:id])
+    end
+
+    def initial_tree_state_args(version_id, definition_id)
+      @initial_tree_state_args ||= {
+        version:       version_id,
+        id:            version_id,
+        head:          version_id,
+        definition_id:,
+        current:       {},
+      }
     end
 
     # @param [String] definition_hash the id of the tineline definition
     # @param [String] the json string of the definition
     # @preturn [Hash] an empty hash with all entries empty
-    def initial_timeline_tree(definition_hash, definition_json)
+    #
+    def initial_timeline_tree(definition_hash, definition_json, tree_state:)
       {
         id:                            SecureRandom.hex(8),
         head:                          Factory.initial_timestamp,
@@ -87,18 +102,7 @@ module CartridgeCore
           id:        definition_hash,
           timestamp: Factory.initial_timestamp,
         }],
-        trees:                         {
-          "#{Factory.initial_timestamp}": {
-            current:        {},
-            commits:        [],
-            stop_processes: [],
-            head:           Factory.initial_timestamp.to_s,
-            parameters:     [],
-            definition_id:  definition_hash,
-            routes:         {},
-            id:             Factory.initial_timestamp.to_s,
-          },
-        },
+        trees:                         [tree_state],
         commits:                       [],
         events:                        [],
         stop_processes:                [],
@@ -119,8 +123,6 @@ module CartridgeCore
 
     class Factory
       class << self
-        def build(*args) = new(*args).build
-
         def initial_commit
           state_commit = build(::CartridgeCore::Entities::StopProcess)
           ::CartridgeCore::Entities::TreeStates::RepositoryCommit.new(
@@ -183,14 +185,11 @@ module CartridgeCore
         end
       end
 
-      def initialize(klass)
+      def build(klass, attributes_only: false)
         @klass = klass
-      end
-
-      def build
         factory_key = @klass.name.split('::').last.underscore.to_sym
         yaml_content = YAML.safe_load_file(Rails.root.join('lib/cartridge_core/cache/factory/samples.yml')).deep_symbolize_keys
-        @klass.new(**yaml_content[factory_key])
+        attributes_only ? yaml_content[factory_key] : @klass.new(**yaml_content[factory_key])
       end
     end
   end
