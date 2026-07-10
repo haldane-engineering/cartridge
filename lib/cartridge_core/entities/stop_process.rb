@@ -2,12 +2,30 @@
 
 module CartridgeCore
   module Entities
-    StopProcess = Struct.new(
-      *%i(status stop_name timeline_id observable_state_key process_unit_ids id blocking expected_units_count route),
-      keyword_init: true,
-    ) do
+    STOP_PROCESS_KEYS = %i(
+      status
+      stop_name
+      timeline_id
+      observable_state_key
+      process_unit_ids
+      id
+      blocking
+      expected_units_count
+      route
+    )
+    PROCESS_UNIT_KEYS = %i(
+      id
+      actual_completion_value
+      expected_completion_value
+      metadata
+      stop_process_id
+      route
+      state_entry_value
+    )
+    StopProcess = Struct.new(*STOP_PROCESS_KEYS, keyword_init: true) do
       include CartridgeCore::Cache::Concerns::SelectivePersistence
       index(:stop_processes)
+      persists!(*(STOP_PROCESS_KEYS - %i(route)))
 
       # def persist!
       #   index = route.timeline.stop_processes.find_index { |st_process| st_process.id == id }
@@ -17,17 +35,10 @@ module CartridgeCore
       #   route.timeline.persist!
       # end
 
-      self::Unit = Struct.new(*%i(
-        id
-        actual_completion_value
-        expected_completion_value
-        metadata
-        stop_process_id
-        route
-        state_entry_value
-      )) do
+      self::Unit = Struct.new(*PROCESS_UNIT_KEYS) do
         include CartridgeCore::Cache::Concerns::SelectivePersistence
         index(:stop_process_units)
+        persists!(*(PROCESS_UNIT_KEYS - %i(route)))
 
         # def persist!
         #   index = route.timeline.stop_process_units.find_index { |process_unit| process_unit.id == id }

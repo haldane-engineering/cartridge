@@ -27,7 +27,7 @@ module CartridgeCore
             st_process.persist!
             # might need to pass a reconciler function in any case
             ::CartridgeCore::Entities::Reconciler.concurrently_execute_with_reconciliation!(
-              process_units_groups.map(&:last),
+              process_unit_groups.map(&:last),
               process_opts.fetch(:blocking, true),
             )
           end

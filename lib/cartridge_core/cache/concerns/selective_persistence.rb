@@ -14,37 +14,44 @@ module CartridgeCore
           @persistable_state ||= begin
             root_state = self.class.persistable_keys.present? ? to_h.slice(*self.class.persistable_keys) : to_h
             root_state.deep_transform(&->(value) {
-              value.respond_to?(:persistable_state) ? value.to_h.slice(*value.class.persistable_keys) : value
+              if value.class.respond_to?(:persistable_keys) && value.class.persistable_keys.present?
+                value.to_h.slice(*value.class.persistable_keys)
+              else
+                value.to_h
+              end
             })
           end
         end
 
-        def set(**attributes)
-          attributes.entries { |(k, v)| send(:"#{k}=", v) }
+        def assign_attributes!(**attributes)
+          attributes.entries.each do |(key, value)|
+            send(:"#{key}=", value)
+          end
           self
         end
 
+        # This method exists for non-committal updates i.e. attributes that are not represented in the current
+        # field (they do not update with commits!), they however update the version
         def persist!
           object_key = self.class.index_key.to_sym
           object_records = route.timeline.send(object_key)
           index = object_records.find_index { |record| record.id == id }
           index ? object_records[index] = self : object_records.unshift(self)
-          match = ->(r_json) { r_json.dig(:id) == id }
           state_entries = route.timeline.tree_state.send(object_key) || []
-          state_entries.unshift({ id: }) unless state_entries.find(&match)
-          route.timeline.tree_state.send(:"#{object_key}=", state_entries)
+          # Don't save if it's already present
+          state_entries.unshift({ id: }) unless state_entries.find(&->(entry_hash) { entry_hash.dig(:id) == id })
+          tree_state_dup = route.timeline.tree_state.dup
+          tree_state_dup.send(:"#{object_key}=", state_entries)
           # This is a suboptimal implementation, the initial plan was to always use a
           # commit to update tree state -> but I will refactor this method to take in
           # a version params which gets propagated as the head of the tree.
           # alternatively I could make the version optional.
-          route.timeline.persist!(
-            route.timeline.tree_state.generate_commit_identifier,
-            route.timeline.tree_state.current,
-          )
+          route.timeline.persist!(new_tree_state: tree_state_dup.to_h)
         end
 
         # alias_method :as_json, :persistable_state
         # alias_method :to_json, :persistable_state
+        alias_method :set, :assign_attributes!
 
         private
 
