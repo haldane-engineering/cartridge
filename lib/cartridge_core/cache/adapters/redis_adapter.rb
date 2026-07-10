@@ -29,7 +29,7 @@ module CartridgeCore
           # remember: the root timeline only contains references
           # so we populate all root entries, e.g -> { id: 1234, head: 1243, commits: [2323, 23343], trees }
           #  becomes { ...rest_of_hash, commits: [{ id: 2323, ...rest_of_commit_body }] }
-          root_idx_keys.each do |association_key|
+          root_index_keys.each do |association_key|
             populate_timeline_associations_using_cursor!(
               timeline,
               association_key,
@@ -85,7 +85,7 @@ module CartridgeCore
         attr_reader :statements, :root_w_namespace
 
         def extract_and_persist_root_indices!(*args)
-          root_idx_keys.map { |key| [key, args] }.each(&method(:extract_values_and_persist!))
+          root_index_keys.map { |key| [key, args] }.each(&method(:extract_values_and_persist!))
         end
 
         def indices_already_set_up?
@@ -94,14 +94,13 @@ module CartridgeCore
         end
 
         def extract_values_and_persist!(args)
-          idx_key, _, tree_state = args.flatten
+          index_key, _, tree_state = args.flatten
           # If the index contains any associational references, replace them with ids
-          tree_state[idx_key].each do |idx_entry|
-            root_idx_keys.each do |key|
-              idx_entry[key] = idx_entry[key].map(&:deep_symbolize_keys).pluck(:id) if idx_entry.key?(key)
-            end if configuration[:eager_loadable_indices].include?(idx_key)
-            storable_key = "$.#{idx_key}.#{idx_entry.deep_symbolize_keys.dig(:id)}"
-            redis.call('JSON.SET', root_w_namespace, storable_key, idx_entry.to_json)
+          tree_state[index_key].each do |index_entry|
+            storable_key = "$.#{index_key}.#{index_entry.deep_symbolize_keys.dig(:id)}"
+            create_query = ['JSON.SET', root_w_namespace, storable_key, index_entry.to_json]
+            p create_query
+            redis.call(*create_query)
           end
         end
 
@@ -110,7 +109,7 @@ module CartridgeCore
           # recent tree version and persist that to the global tree object - making sure to replace contained objects
           # with reference ids
           tree_state[:trees].each do |tree|
-            root_idx_keys.each do |key|
+            root_index_keys.each do |key|
               tree[key] = tree_state[key].map(&:deep_symbolize_keys).pluck(:id) if tree.key?(key)
             end
             redis.call('JSON.SET', root_w_namespace, "$.trees.#{tree.deep_symbolize_keys[:id]}", tree.to_json)
@@ -118,7 +117,7 @@ module CartridgeCore
         end
 
         def persist_timeline!(timeline_id, timeline_tree)
-          nil_timeline = root_idx_keys.index_with([]).merge(head: nil)
+          nil_timeline = root_index_keys.index_with([]).merge(head: nil)
           timeline_from_cache = redis.call('JSON.GET', root_w_namespace, "$.timelines.#{timeline_id}")
           # -> timeline here will only
           empty_index_response = configuration[:empty_index_response]
@@ -126,14 +125,14 @@ module CartridgeCore
           # retrieving with JSON.get returns an array type
           timeline = timeline.deep_symbolize_keys.merge(**timeline_tree)
           # trees commits events stop processes and units will all be an array of ids
-          root_idx_keys.each do |key|
+          root_index_keys.each do |key|
             compound_association_ids = [*timeline_tree[key], *timeline[key]].compact.pluck(:id)
             timeline[key] = compound_association_ids.map(&:to_s).uniq
           end
           redis.call('JSON.SET', root_w_namespace, "$.timelines.#{timeline_id}", timeline.to_json)
         end
 
-        def nil_timeline_state = root_idx_keys.index_with([]).merge(head: nil)
+        def nil_timeline_state = root_index_keys.index_with([]).merge(head: nil)
 
         def populate_timeline_associations_using_cursor!(timeline, association_key, load_opts)
           offset, limit = load_opts[:cursor].merge(load_opts[association_key] || {}).values_at(*%i(offset limit))
@@ -158,9 +157,9 @@ module CartridgeCore
 
         def populate_timeline_association_from_cache(*args)
           # apply constraints first
-          idx, assoc, limit, offset = args
-          idx = idx.slice(offset, limit + offset)
-          association_query = idx.map { |id| "@.id == '#{id}'" }.join('||')
+          index, assoc, limit, offset = args
+          index = index.slice(offset, limit + offset)
+          association_query = index.map { |id| "@.id == '#{id}'" }.join('||')
           p ['JSON.GET', root_w_namespace, "$.#{assoc}.[?(#{association_query}})]"]
           results = redis.call('JSON.GET', root_w_namespace, "$.#{assoc}[?(#{association_query})]")
           JSON.parse(results) if results
@@ -173,7 +172,7 @@ module CartridgeCore
             root_namespace:         :catridgecore,
             default_cursor_limit:   1000,
             default_cursor_offset:  0,
-            full_key_set:           %i(timelines trees) + root_idx_keys,
+            full_key_set:           %i(timelines trees) + root_index_keys,
             empty_index_response:   '[]',
             eager_loadable_indices: %i(trees),
           }
@@ -183,8 +182,8 @@ module CartridgeCore
           @redis ||= Redis.new
         end
 
-        def root_idx_keys
-          @root_idx_keys ||= %i(
+        def root_index_keys
+          @root_index_keys ||= %i(
             definitions
             trees
             commits
@@ -200,7 +199,7 @@ module CartridgeCore
           @base_load_opts = {
             only:            [],
             except:          [],
-            eager_load_keys: root_idx_keys,
+            eager_load_keys: root_index_keys,
             cursor:          {
               limit:  configuration[:default_cursor_limit],
               offset: configuration[:default_cursor_offset],

@@ -39,12 +39,14 @@ module CartridgeCore
       def self.base_keys = BASE_KEYS
 
       # @param [String | Integer] version the version number for this new tree
-      # tree
       def persist!(new_tree_state: nil)
-        # persistable_state[:trees] is a list of tree_states, when fetching from the cache
+        # persistable_state[:trees] is a list of trqeee_states, when fetching from the cache
         # during the association population step -> trees returns as an array but during tree snapshotting
         # it expects a hash -> this is a design flaw I need to address.
-        transform_tree_state = ->(tree_state) { head?(tree_state) ? tree_state.assign_attributes!(new_tree_state).to_h : tree_state } 
+        transform_tree_state = ->(tree_state) {
+          t_state = tree_state[:id] == head ? tree_state.assign_attributes!(new_tree_state) : tree_state
+          t_state.to_h
+        }
         persistable_state[:trees] = persistable_state[:trees].map(&transform_tree_state)
         cache.snapshot!(id, persistable_state)
         reload!
@@ -52,19 +54,11 @@ module CartridgeCore
 
       def reload!
         _, n_state = cache.load!(id)
-        ::CartridgeCore::Services::CacheAtreections::Load.apply!(self, n_state)
+        ::CartridgeCore::Services::CacheActions::Load.apply!(self, n_state)
         self
       end
 
       delegate :using_namespace, to: :context
-
-      private
-
-      def head?(tree_state)
-        tree_state.id == head
-      end
-
-      def ass
     end
   end
 end
