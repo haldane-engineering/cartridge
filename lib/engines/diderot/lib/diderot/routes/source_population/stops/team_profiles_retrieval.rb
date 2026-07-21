@@ -7,19 +7,20 @@ module Diderot
         class TeamProfilesRetrieval < ::Diderot::Routes::ApplicableStop
           def call
             # take the first 5 for now
+            teams = fetch_teams_with_members
             provider.fetch_teams.slice(0, 5).each do |team_json|
               provider.team_class.find_or_create_by(**provider.formatter.team_attributes_from_json(team_json)).tap do |team|
                 populate_team_players!(team)
-              end unless team_already_populated?(team_json)
+              end unless team_already_populated?(team_json, teams:)
             end
             spawn_processes!([-> { populate_memberships_with_context! }], blocking: false)
-            changeset_add(key: :available_team_ids, value: teams.ids)
+            changeset_add(key: :available_team_ids, value: teams.map(&->(team_entry) { team_entry['id'] }))
           end
 
           private
 
-          def team_already_populated?(team_json)
-            teams_with_members_count.any?(&->(team_obj) {
+          def team_already_populated?(team_json, teams:)
+            teams.any?(&->(team_obj) {
               team_obj['external_id'] == team_json[provider.settings[:identifier_key]] &&
               provider.settings[:team_memberships_range].cover?(team_obj['player_count'])
             })
@@ -38,8 +39,8 @@ module Diderot
             sleep provider.settings[:request_buffer] if provider.settings[:request_buffer]
           end
 
-          def teams_with_members_count
-            @teams_with_members_count ||= ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql(
+          def fetch_teams_with_members
+            ActiveRecord::Base.connection.execute(ActiveRecord::Base.sanitize_sql(
               <<~SQL,
                 SELECT DISTINCT(teams.id), teams.external_id, count(memberships.id) as player_count
                 FROM #{provider.team_class.table_name} teams

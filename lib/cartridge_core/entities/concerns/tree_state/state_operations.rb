@@ -30,8 +30,9 @@ module CartridgeCore
           def apply_commit!(commit)
             # TODO: might need to perform some checks here before applying
             self.current = current.except(*commit.original_state.keys).merge(commit.final_state)
-            commit_params = { id: commit.id, entity: commit, applied: true, timestamp: Time.zone.now.to_i }
-            repository_commit = TreeState::RepositoryCommit.new(**commit_params)
+            commit_params = { id: commit.id, commit:, applied: true, applied_at: Time.zone.now.to_i }
+
+            repository_commit = TreeStates::RepositoryCommit.new(**commit_params)
             # Ensure to remove the contained commits if they are present and it's an undo action.
             # This is pretty much the only part of this application I'm quite uncomfortable with
             # the complete disappearance of work done -> the data is absolutely reversible, but the loss of the

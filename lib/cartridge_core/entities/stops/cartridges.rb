@@ -26,7 +26,8 @@ module CartridgeCore
             st_process.process_unit_ids = process_units.map(&:id)
             st_process.persist!
             # might need to pass a reconciler function in any case
-            ::CartridgeCore::Entities::Reconciler.concurrently_execute_with_reconciliation!(
+            reconciler = ::CartridgeCore::Entities::Reconciler.new
+            reconciler.concurrently_execute_with_reconciliation!(
               process_unit_groups.map(&:last),
               process_opts.fetch(:blocking, true),
             )

@@ -32,7 +32,7 @@ module CartridgeCore
         attr_reader :route, :context
 
         def commit_stop_changeset_to_tree_state!(stop)
-          merge_ctx = ::CartridgeCore::Services::Changeset::Merger.call(stop, stop.changeset)
+          merge_ctx = ::CartridgeCore::Services::Changeset::Merger.call(route.tree_state, stop.changeset)
           halt!(:unsuccessful_merge_error, merge_ctx.errors) unless merge_ctx.success?
           route.commit!(stop.changeset, merge_ctx.payload)
         end

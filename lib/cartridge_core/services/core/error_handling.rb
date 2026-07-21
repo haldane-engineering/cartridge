@@ -36,6 +36,10 @@ module CartridgeCore
           raise Services::Base::InvalidInputError, input.errors.flat_map(&:message) unless input.valid?
         end
 
+        def self.included(klass)
+          klass.include(Validatable)
+        end
+
         module Validatable
           module ClassMethods
             # Indicates that checks should be performed on input validation.
