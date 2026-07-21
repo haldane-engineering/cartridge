@@ -12,11 +12,23 @@ module CartridgeCore
       # @param [Models::Stop] stops a list of stops we want execute concurrently
       # @returns [Models::Stop]
       def concurrently_execute_with_reconciliation!(actors, blocking = true)
-        pool = Concurrent::FixedThreadPool.call(actors.count)
-        promises = actors.map { |actor| Concurrent::Promises.future(executor: pool, &actor) }
-        return Concurrent::Promises.zip(*promises).on_fulfilment { pool.shutdown } unless blocking
+        pool = Concurrent::FixedThreadPool.new(actors.count)
+        promises = actors.map { |actor| Concurrent::Promises.future(&actor) }
+        return Concurrent::Promises.zip(*promises).value if blocking
 
-        Concurrent::Promises.zip(*promises).value!
+        Concurrent::Promises.zip(*promises).on_fulfilment { shutdown!(pool) }
+        promises
+      rescue
+        shutdown!(pool)
+      end
+
+      private
+
+      def shutdown!(pool)
+        if pool
+          pool.shutdown
+          pool.wait_for_termination
+        end
       end
     end
   end

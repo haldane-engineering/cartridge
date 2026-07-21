@@ -4,8 +4,10 @@ module CartridgeCore
   module Services
     module TreeState
       class CommittalService < Services::Base
+        COMMIT_PREFIX = 'xC'
+
         def initialize(entity, changeset:, state:)
-          @entity = ::CartridgeCore::Decorators::TreeStates::CommitableEntityDecorator.decorate(entity)
+          @entity = ::CartridgeCore::Decorators::TreeState::CommitableEntityDecorator.decorate(entity)
           @changeset = changeset
           @new_state = state
         end
@@ -36,7 +38,7 @@ module CartridgeCore
             commit = entity.tree_state.preceeding_commit_for(commit_opts.dig(:contains).last)
             commit.assign_attributes!(**commit_opts)
           else
-            ::CartridgeCore::Entities::TreeStates::Commit.new(commit_opts.merge(id: commit_id, changeset: changeset))
+            ::CartridgeCore::Entities::TreeStates::Commit.new(**commit_opts.merge(id: commit_id, changeset: changeset))
           end
           commit.assign_original_state!(original_tree_state)
           # first rebuild mergeable state
@@ -45,10 +47,11 @@ module CartridgeCore
             # prefix the name of the committing entity to the store key
             # this has to be conditional -> if the name already includes the full
             # commitable name then return as is -> else prepend the commitable_name
-            next n_state[key] = new_state[key] unless key.include?(entity.commitable_name)
+            next n_state[key] = new_state[key] if key.to_s.include?(entity.commitable_name)
 
             n_state[:"#{entity.commitable_name}_#{key}"] = new_state[key]
           end
+
           commitable_state = original_tree_state.merge(commitable_state)
           pre_commit_assignment_state = commitable_state.dup
           #  changeset.keys -> ["_entity_name_actual_key_name_cX"].
@@ -57,7 +60,7 @@ module CartridgeCore
           # the new commit id -> all commits start with xC092234934
           changeset.map(&:key).each do |change_entry_key|
             s_key, _ = tree_state_entry_for(change_entry_key, pre_commit_assignment_state)
-            precommit_assignment_state[:"#{original_key_for(s_key)}_#{commit.id}"] =
+            pre_commit_assignment_state[:"#{original_key_for(s_key.to_s)}_#{commit.id}"] =
               pre_commit_assignment_state.delete(s_key)
           end
 
@@ -69,14 +72,14 @@ module CartridgeCore
             # use the dummy object pattern to handle this nil condition
             entity.parent.tree_state.apply_commit!(commit)
             # map the new current state to the trees entry
-            # build the persistable state and save to cache!
+            # build the persistable state and save to cache
             entity.parent.build_tree_and_save!
           end
         end
 
         private
 
-        attr_reader :state, :changeset, :new_state, :commit_opts
+        attr_reader :state, :changeset, :new_state, :commit_opts, :entity
 
         def tree_state_entry_for(target_key, tree_state)
           current_key = tree_state.keys.find do |key|
@@ -87,6 +90,17 @@ module CartridgeCore
 
         def rollback_is_an_undo_action?
           commit_opts&.dig(:rollback_state) == :undo
+        end
+
+        # @param [Symbol] state_key
+        # @return [String]
+        def original_key_for(state_key)
+          # Each state entry key should have a commit id suffixed to it e.g available_team_ids_0x123456 -> so to extract the original state key
+          # we can confidently split the string and rejoin without the suffix
+          key_parts = state_key.split('_')
+          commit_suffix = key_parts[key_parts.length - 1]
+          state_key = state_key.tr("_#{commit_suffix}") if commit_suffix.starts_with?(COMMIT_PREFIX)
+          state_key
         end
       end
     end

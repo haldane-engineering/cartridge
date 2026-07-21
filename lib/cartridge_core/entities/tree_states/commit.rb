@@ -11,15 +11,15 @@ module CartridgeCore
 
         def initialize(**kwargs)
           super(**kwargs)
-          @state = CommitState.new
+          self.state = CommitState.new
         end
 
         def assign_original_state!(state)
-          state.original = state
+          self.state.original = state
         end
 
         def assign_final_state!(state)
-          state.final = state
+          self.state.final = state
         end
 
         def assign_attributes!(**attributes)
@@ -28,6 +28,9 @@ module CartridgeCore
           end
           self
         end
+
+        def original_state = state.original
+        def final_state = state.final
 
         def undo?
           rollback_state == :undo

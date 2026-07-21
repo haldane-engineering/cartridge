@@ -6,9 +6,9 @@
 module CartridgeCore
   module Services
     class Base
+      include Core::ErrorHandling
       class ServiceError < StandardError; end
       class InvalidInputError < StandardError; end
-      include Core::ErrorHandling::Validatable
 
       # Calls the service with the provided keyword arguments.
       #

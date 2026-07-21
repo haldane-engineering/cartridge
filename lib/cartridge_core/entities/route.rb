@@ -22,7 +22,7 @@ module CartridgeCore
       include CartridgeCore::Cache::Concerns::SelectivePersistence
       include CartridgeCore::Entities::Concerns::StateIntegrityEnforcement::Core
 
-      persists!(*(ROUTE_KEYS - %i(context tree_state stops index)))
+      persists!(*(ROUTE_KEYS - %i(context tree_state stops index definitions)))
 
       def self.base_keys = ROUTE_KEYS
 

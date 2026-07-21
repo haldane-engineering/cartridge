@@ -4,7 +4,7 @@ module CartridgeCore
   module Services
     module Changeset
       class Merger < Services::Base
-        include CartridgeCore::Errors::Concerns::DynamicErrorPropagation
+        include CartridgeCore::Errors::DynamicPropagation
 
         def self.call(*args)
           new(*args).call
@@ -59,10 +59,10 @@ module CartridgeCore
           change_entry.applied = true
         end
 
-        def without_deleted_qualifier(key) = key.gsup('_deleted', '')
+        def without_deleted_qualifier(key) = key.gsub('_deleted', '')
 
         def validate_changeset!
-          changset.each do |change_entry|
+          changeset.each do |change_entry|
             halt!(:invalid_change_entry_error) if strategies.exclude?(change_entry.strategy)
             halt!(:invalid_change_entry_error) if change_entry.add? && !change_entry.value
             halt!(:invalid_change_entry_error) if change_entry.remove? && !(change_entry.value.is_a?(String) || change_entry.value.is_a?(Symbol))
