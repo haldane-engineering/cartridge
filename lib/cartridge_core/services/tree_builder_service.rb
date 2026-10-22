@@ -26,7 +26,7 @@ module CartridgeCore
         end
         definition_json = definition.to_json
         _, tl_state = cache.timeline_state_for(Digest::MD5.hexdigest(definition_json), initial_definition: definition)
-        # Scheduled executions are global objects, mostly independent of any state, but we also need to track it state wise
+        # Scheduled executions are global objects, mostly independent of any state, but we also need to track it statewise
         # we use the execution to filter already run routes and stops as a continuity conduit. If no scheduled execution then
         # we initialize a new one without the id and go through with the rest of the process.
         tl_state = tl_state.merge(scheduled_timeline_executions: [

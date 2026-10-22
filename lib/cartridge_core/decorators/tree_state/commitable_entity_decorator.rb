@@ -8,16 +8,21 @@ module CartridgeCore
 
         def assign_current_state_with_commit!(commit)
           entity.tree_state.head = commit.id
-          entity.rree_state.current = commit.final_state
+          entity.tree_state.current = commit.final_state
         end
 
         def commitable_name
-           # Commitable name is the name of the commiting class underscored
-          # and the entity type prefixed. Might be sensible to include the timeline key as well
-          @commitable_name ||= object.is_a?(::CartridgeCore::Entities::Route) && "ro_#{name}"
+          @commitable_name ||= object.is_a?(::CartridgeCore::Entities::Route) && full_commit_name_using_route
         end
 
         delegate :parent, to: :object
+
+        private
+
+        def full_commit_name_using_route
+          # the commiting stop must be available in context
+          @full_commit_name_using_route ||= "ro_#{name}.st_#{context.stop.name.underscore}"
+        end
       end
     end
   end

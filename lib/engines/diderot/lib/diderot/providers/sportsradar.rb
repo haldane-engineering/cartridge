@@ -40,7 +40,7 @@ module Diderot
         def fetch_scheduled_games(date)
           formatted_date = date.strftime('%Y/%m/%d')
           response = exec_request(URI("#{configuration.settings.dig(:base_url)}/games/#{formatted_date}/schedule.json"))
-          JSON.parse(response)
+          JSON.parse(response)['games']
         end
 
         def fetch_game_play_by_play(game)
@@ -98,7 +98,7 @@ module Diderot
             game_log_class: ::Diderot::Nba::GameLog,
             settings: {
               # store the api key securely
-              api_key:                   '9LWpuAoFoIkMm6bikYW5Qn4GKK8qacXzKJ1nejGy',
+              api_key:                   '7feHe9OgSijUCpkVNpwhbq65xDSkBGJWjgZNh183',
               base_url:                  'https://api.sportradar.com/nba/trial/v8/en',
               access_level:              :trial,
               identifier_key:            'id',
@@ -123,6 +123,10 @@ module Diderot
 
           raise NotImplementedError
         end
+
+        # def formatter
+        #   ::SportsRadar::Formatter.call(params: sports_radar_json_body)
+        # end
 
         delegate(*CONFIG_KEYS, to: :configuration)
 
@@ -213,7 +217,7 @@ module Diderot
             )
           end
 
-          def internal_team_id_for(external_team_id) = ::Diderot::Nba::Team.find_by!(external_id: external_team_id)
+          def internal_team_id_for(external_team_id) = ::Diderot::Nba::Team.find_by!(external_id: external_team_id).id
 
           private
 

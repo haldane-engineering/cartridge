@@ -34,7 +34,7 @@ module CartridgeCore
       final
       changes
       id
-      commits
+      applied_commits
       main
       stop_processes
       stop_process_units
@@ -43,7 +43,9 @@ module CartridgeCore
       parameters
       definition_id
       routes
+      commits
     ]
+    # TODO: commits atop is probably misplaced -> will need to revisit.
     COMMIT_ID_SLICING_RANGE = (0..8)
     # Examp
     TreeState = Struct.new(*STATE_KEYS, keyword_init: true) do

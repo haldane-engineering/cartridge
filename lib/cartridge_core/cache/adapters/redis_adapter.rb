@@ -8,7 +8,7 @@ module CartridgeCore
         include ::CartridgeCore::Errors::DynamicPropagation
         FLAT_OBJ_TYPES = [String, NilClass, Integer, Float].freeze
 
-        # I3ndex doc looks like this
+        # Index doc looks like this
         # timelines: {}, events: {}, trees: {}, commits: {}, resolver_processes: {}, resolver_process_units
         def initialize(root = :cartridge)
           @statements = []
@@ -95,7 +95,7 @@ module CartridgeCore
 
         def extract_values_and_persist!(args)
           index_key, _, tree_state = args.flatten
-          # If the index contains any associational references, replace them with ids
+          # If the index entry (trees, commits, definitions) contains any associational references, replace them with ids
           tree_state[index_key].each do |index_entry|
             storable_key = "$.#{index_key}.#{index_entry.deep_symbolize_keys.dig(:id)}"
             create_query = ['JSON.SET', root_w_namespace, storable_key, index_entry.to_json]

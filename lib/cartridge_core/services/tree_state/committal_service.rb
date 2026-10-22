@@ -7,7 +7,7 @@ module CartridgeCore
         COMMIT_PREFIX = 'xC'
 
         def initialize(entity, changeset:, state:)
-          @entity = ::CartridgeCore::Decorators::TreeState::CommitableEntityDecorator.decorate(entity)
+          @entity = entity
           @changeset = changeset
           @new_state = state
         end
@@ -30,6 +30,8 @@ module CartridgeCore
         # now merged state -> resulting in the final state. it then assigns that to the commits final state and updates the entity
         # current_state with the commit's final state, finally pushing the commit into the entity's commit bucket.
         def commit!
+          @entity = ::CartridgeCore::Decorators::TreeState::CommitableEntityDecorator
+            .decorate(entity, context: commit_opts)
           original_tree_state = entity.tree_state.current
           commit_id = @commit_id || "xC#{SecureRandom.hex(8)}"
           # when rolling back -> if the rollback is missing an undo qualifier, then generate a new rollback commit
@@ -38,7 +40,10 @@ module CartridgeCore
             commit = entity.tree_state.preceeding_commit_for(commit_opts.dig(:contains).last)
             commit.assign_attributes!(**commit_opts)
           else
-            ::CartridgeCore::Entities::TreeStates::Commit.new(**commit_opts.merge(id: commit_id, changeset: changeset))
+            ::CartridgeCore::Entities::TreeStates::Commit.new(**commit_opts.merge(
+              id: commit_id,
+              changeset: changeset,
+            ))
           end
           commit.assign_original_state!(original_tree_state)
           # first rebuild mergeable state
@@ -49,7 +54,7 @@ module CartridgeCore
             # commitable name then return as is -> else prepend the commitable_name
             next n_state[key] = new_state[key] if key.to_s.include?(entity.commitable_name)
 
-            n_state[:"#{entity.commitable_name}_#{key}"] = new_state[key]
+            n_state[:"$.#{entity.commitable_name}.#{key}"] = new_state[key]
           end
 
           commitable_state = original_tree_state.merge(commitable_state)
@@ -60,11 +65,12 @@ module CartridgeCore
           # the new commit id -> all commits start with xC092234934
           changeset.map(&:key).each do |change_entry_key|
             s_key, _ = tree_state_entry_for(change_entry_key, pre_commit_assignment_state)
-            pre_commit_assignment_state[:"#{original_key_for(s_key.to_s)}_#{commit.id}"] =
+            pre_commit_assignment_state[:"#{original_key_for(s_key.to_s)}.#{commit.id}"] =
               pre_commit_assignment_state.delete(s_key)
           end
-
+          # assign the final state and save to cache. Subsequent references will
           commit.assign_final_state!(pre_commit_assignment_state)
+            .persist!(entity.timeline)
           # commit.current_state { ...former_state_keys, **new_state_keys}
           # push the commit into the entity's applied commits bucket
           entity.tree_state.apply_commit!(commit)

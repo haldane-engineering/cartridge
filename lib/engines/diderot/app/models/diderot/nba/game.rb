@@ -5,11 +5,11 @@ module Diderot
     class Game < ApplicationRecord
       self.table_name = 'diderot_nba_games'
 
-      belongs_to :home_team, class_name: 'Diderot::NBA::Team'
-      belongs_to :away_team, class_name: 'Diderot::NBA::Team'
-      belongs_to :league, class_name: 'Diderot::Leagues::Nba'
+      belongs_to :home_team, class_name: '::Diderot::Nba::Team'
+      belongs_to :away_team, class_name: '::Diderot::Nba::Team'
+      belongs_to :league, class_name: '::Diderot::Leagues::Nba'
 
-      has_one :game_log, class_name: 'Diderot::Nba::GameLog', dependent: :nullify
+      has_one :game_log, class_name: '::Diderot::Nba::GameLog', dependent: :nullify
 
       def full_identifier
         raise NotImplementedError
@@ -52,7 +52,7 @@ end
 #  id                    :bigint           not null, primary key
 #  away_timezone         :string
 #  broadcast_network     :string
-#  home_timezeone        :string
+#  home_timezone         :string
 #  metadata              :jsonb
 #  scheduled_at          :datetime
 #  season_type           :string

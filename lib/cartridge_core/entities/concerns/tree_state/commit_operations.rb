@@ -5,8 +5,12 @@ module CartridgeCore
     module Concerns
       module TreeState
         module CommitOperations
+          # @param [Array<CartridgeCore::Entities::ChangeEntry>]
+          # @param [Hash] state - the new state to be persisted
+          # @param [Hash] commit_opts - includes the stop
           def commit!(changeset, state, **commit_opts)
-            ::CartridgeCore::Services::TreeState::CommittalService.new(self, changeset:, state:)
+            ::CartridgeCore::Services::TreeState::CommittalService
+              .new(self, changeset:, state:)
               .using_commit_opts(**commit_opts)
               .commit!
           end
