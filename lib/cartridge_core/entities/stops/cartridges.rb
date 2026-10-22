@@ -6,7 +6,7 @@ module CartridgeCore
       module Cartridges
         module Enablement
           %i(spawns_processes schedules_execution).each do |enablement_name|
-            define_method(:"#{enablement_name}?", &->() { __send__(enablement_name) })
+            define_method(:"#{enablement_name}?", &-> { __send__(enablement_name) })
           end
         end
 

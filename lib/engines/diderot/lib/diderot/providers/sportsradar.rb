@@ -98,15 +98,16 @@ module Diderot
             game_log_class: ::Diderot::Nba::GameLog,
             settings: {
               # store the api key securely
-              api_key:                   '7feHe9OgSijUCpkVNpwhbq65xDSkBGJWjgZNh183',
-              base_url:                  'https://api.sportradar.com/nba/trial/v8/en',
-              access_level:              :trial,
-              identifier_key:            'id',
-              exact_teams_count:         30,
-              min_team_membership_count: 12,
-              request_buffer:            10.seconds,
+              api_key:                          '7feHe9OgSijUCpkVNpwhbq65xDSkBGJWjgZNh183',
+              base_url:                         'https://api.sportradar.com/nba/trial/v8/en',
+              access_level:                     :trial,
+              identifier_key:                   'id',
+              exact_teams_count:                30,
+              min_team_membership_count:        12,
+              request_buffer:                   10.seconds,
               # TODO: - find the league defined values for this.
-              team_memberships_range:    (12..50),
+              team_memberships_range:           (12..50),
+              persistable_game_log_event_types: %w(twopointmade twopointmiss threepointmade threepointmiss),
             },
             timezone: 'US/Eastern',
             images_provider: ::Diderot::Providers::Images::Sportsdb.new,
@@ -210,9 +211,10 @@ module Diderot
             match_relevant_events = ->(event) {
               configuration.settings.dig(:persistable_game_log_event_types).include?(event['event_type'])
             }
+            game_events = game_log_json.dig('periods').pluck('events').flatten
             game_log_json.slice(*Diderot::Nba::GameLog.attribute_names).merge(
               game_id: game.id,
-              raw_json: game_log_json.merge(events: game_log_json.dig('events').select(&match_relevant_events)),
+              raw_json: game_log_json.merge(events: game_events.select(&match_relevant_events)),
               external_id:,
             )
           end

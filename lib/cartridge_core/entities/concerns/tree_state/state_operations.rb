@@ -19,10 +19,7 @@ module CartridgeCore
             route_key_entry = key_parts.find(&->(k_part) { k_part.starts_with?(ROUTE_KEY_PREFIX) })
             # looks something like this [["st_available_games_retrieval", "ro_source_population"], ""]
             full_key_with_commit = entry_for(['$', route_key_entry, leaf_field])
-            if full_key_with_commit
-              k_value = current.dig(entry_for(full_key_with_commit).first)
-              JSON.parse(k_value) if k_value
-            end
+            current.dig(full_key_with_commit.first) if full_key_with_commit
           end
 
           # @param [CartridgeCore::Entities::Commit] commit the commit to be applied

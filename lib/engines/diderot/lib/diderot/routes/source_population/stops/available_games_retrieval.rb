@@ -8,7 +8,10 @@ module Diderot
           def call
             available_games = provider.fetch_scheduled_games(route.context.parameters.dig(:date) || Time.zone.today)
             extract_game_id = ->(g_json) {
-              provider.game_class.find_or_create_by!(provider.formatter.game_attributes_from_json(g_json)).id
+              provider.game_class.find_or_create_by!(
+                provider.formatter.game_attributes_from_json(g_json)
+                .except(*%w(id)),
+              ).id
             }
             available_game_ids = available_games.map(&extract_game_id)
             changeset_add(key: :available_game_ids, value: available_game_ids)
