@@ -16,6 +16,7 @@ module Diderot
           images_provider
           decorators
           game_log_class
+          replay_url_retriever
         ).freeze
         DISTRIBUTION_CHANNELS = %i(youtube).index_with(&:itself)
         HIGHLIGHTABLE_EVENT_TYPES = %w(twopointmade threepointmade).freeze
@@ -96,6 +97,7 @@ module Diderot
             team_membership_class: ::Diderot::Nba::TeamMembership,
             game_class: ::Diderot::Nba::Game.includes(*%i(home_team away_team)),
             game_log_class: ::Diderot::Nba::GameLog,
+            replay_url_retriever: internal_replay_url_retriever,
             settings: {
               # store the api key securely
               api_key:                          '7feHe9OgSijUCpkVNpwhbq65xDSkBGJWjgZNh183',
@@ -164,6 +166,15 @@ module Diderot
         def youtube_distribution?(channel) = channel == :youtube
 
         def highlightable_event_types = HIGHLIGHTABLE_EVENT_TYPES
+
+        def internal_replay_url_retriever
+          @internal_replay_url_retriever ||=
+            "Diderot::Providers::Replays::#{phantombox_enabled? ? "StreamEast" : "BasketballVideo"}".constantize
+        end
+
+        def phantombox_enabled?
+          ENV.fetch('CARTRIDGE_PHANTOM_BOX_ENABLED', false)
+        end
 
         # TODO: refactor to own file
         class Formatter
