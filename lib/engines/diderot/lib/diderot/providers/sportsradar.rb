@@ -16,6 +16,7 @@ module Diderot
           images_provider
           decorators
           game_log_class
+          replay_url_retriever
         ).freeze
         DISTRIBUTION_CHANNELS = %i(youtube).index_with(&:itself)
         HIGHLIGHTABLE_EVENT_TYPES = %w(twopointmade threepointmade).freeze
@@ -40,7 +41,7 @@ module Diderot
         def fetch_scheduled_games(date)
           formatted_date = date.strftime('%Y/%m/%d')
           response = exec_request(URI("#{configuration.settings.dig(:base_url)}/games/#{formatted_date}/schedule.json"))
-          JSON.parse(response)
+          JSON.parse(response)['games']
         end
 
         def fetch_game_play_by_play(game)
@@ -96,17 +97,19 @@ module Diderot
             team_membership_class: ::Diderot::Nba::TeamMembership,
             game_class: ::Diderot::Nba::Game.includes(*%i(home_team away_team)),
             game_log_class: ::Diderot::Nba::GameLog,
+            replay_url_retriever: internal_replay_url_retriever,
             settings: {
               # store the api key securely
-              api_key:                   '9LWpuAoFoIkMm6bikYW5Qn4GKK8qacXzKJ1nejGy',
-              base_url:                  'https://api.sportradar.com/nba/trial/v8/en',
-              access_level:              :trial,
-              identifier_key:            'id',
-              exact_teams_count:         30,
-              min_team_membership_count: 12,
-              request_buffer:            10.seconds,
+              api_key:                          '7feHe9OgSijUCpkVNpwhbq65xDSkBGJWjgZNh183',
+              base_url:                         'https://api.sportradar.com/nba/trial/v8/en',
+              access_level:                     :trial,
+              identifier_key:                   'id',
+              exact_teams_count:                30,
+              min_team_membership_count:        12,
+              request_buffer:                   10.seconds,
               # TODO: - find the league defined values for this.
-              team_memberships_range:    (12..50),
+              team_memberships_range:           (12..50),
+              persistable_game_log_event_types: %w(twopointmade twopointmiss threepointmade threepointmiss),
             },
             timezone: 'US/Eastern',
             images_provider: ::Diderot::Providers::Images::Sportsdb.new,
@@ -123,6 +126,10 @@ module Diderot
 
           raise NotImplementedError
         end
+
+        # def formatter
+        #   ::SportsRadar::Formatter.call(params: sports_radar_json_body)
+        # end
 
         delegate(*CONFIG_KEYS, to: :configuration)
 
@@ -159,6 +166,15 @@ module Diderot
         def youtube_distribution?(channel) = channel == :youtube
 
         def highlightable_event_types = HIGHLIGHTABLE_EVENT_TYPES
+
+        def internal_replay_url_retriever
+          @internal_replay_url_retriever ||=
+            "Diderot::Providers::Replays::#{phantombox_enabled? ? "StreamEast" : "BasketballVideo"}".constantize
+        end
+
+        def phantombox_enabled?
+          ENV.fetch('CARTRIDGE_PHANTOM_BOX_ENABLED', false)
+        end
 
         # TODO: refactor to own file
         class Formatter
@@ -206,14 +222,15 @@ module Diderot
             match_relevant_events = ->(event) {
               configuration.settings.dig(:persistable_game_log_event_types).include?(event['event_type'])
             }
+            game_events = game_log_json.dig('periods').pluck('events').flatten
             game_log_json.slice(*Diderot::Nba::GameLog.attribute_names).merge(
               game_id: game.id,
-              raw_json: game_log_json.merge(events: game_log_json.dig('events').select(&match_relevant_events)),
+              raw_json: game_log_json.merge(events: game_events.select(&match_relevant_events)),
               external_id:,
             )
           end
 
-          def internal_team_id_for(external_team_id) = ::Diderot::Nba::Team.find_by!(external_id: external_team_id)
+          def internal_team_id_for(external_team_id) = ::Diderot::Nba::Team.find_by!(external_id: external_team_id).id
 
           private
 

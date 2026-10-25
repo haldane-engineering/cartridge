@@ -32,8 +32,7 @@ module CartridgeCore
 
         # add other helper methods
 
-        def respond_to_missing?(method_name,
-          include_private = false)
+        def respond_to_missing?(method_name, include_private = false)
           method_name.starts_with?('changeset_') || super
         end
 

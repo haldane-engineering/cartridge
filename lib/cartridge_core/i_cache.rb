@@ -47,7 +47,7 @@ module CartridgeCore
     def load!(*args)
       timeline = adapter.load!(*args)
       # return the head tree_state and the timeline in response
-      current_tree_state_for_timeline = timeline.dig(:trees, timeline[:head])
+      current_tree_state_for_timeline = timeline[:trees].find { _1.deep_symbolize_keys[:head] == timeline[:head] }
       [current_tree_state_for_timeline, timeline]
     end
 
@@ -80,11 +80,12 @@ module CartridgeCore
 
     def initial_tree_state_args(version_id, definition_id)
       @initial_tree_state_args ||= {
-        version:       version_id,
-        id:            version_id,
-        head:          version_id,
+        version:         version_id,
+        id:              version_id,
+        head:            version_id,
         definition_id:,
-        current:       {},
+        current:         {},
+        applied_commits: [],
       }
     end
 

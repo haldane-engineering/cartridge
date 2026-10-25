@@ -5,24 +5,21 @@ module CartridgeCore
     module Concerns
       module TreeState
         module StateOperations
+          ROUTE_KEY_PREFIX = 'ro'
           # @param [String] key should be one of 'route_name.stop_name.value' or '$ro_routename.st_stopname.value.commit_id'
           # if the key begins with $then you can assume the
           # @return [Any]
           def get(key)
-            return current.dig(key) if flat_key?(key)
-
             # ex: 'available_games_retrieval.game_ids' -> '$st_available_games_retrieval.game_ids.xC03434j454"
             key_parts = key.split('.')
             leaf_field = key_parts.pop # 'game_ids' from example
-            accessors = key_parts.reverse.map.with_index do |entry, index|
+            key_parts = key_parts.reverse.map.with_index(&->(entry, index) {
               "#{key_index_prefixes[index.to_s]}_#{entry}"
-            end
+            })
+            route_key_entry = key_parts.find(&->(k_part) { k_part.starts_with?(ROUTE_KEY_PREFIX) })
             # looks something like this [["st_available_games_retrieval", "ro_source_population"], ""]
-            full_key_with_commit = entry_for(['$', *accessors.reverse, leaf_field].join('.'))
-            if full_key_with_commit
-              k_value = current.dig(entry_for(full_key_with_commit).first)
-              JSON.parse(k_value) if k_value
-            end
+            full_key_with_commit = entry_for(['$', route_key_entry, leaf_field])
+            current.dig(full_key_with_commit.first) if full_key_with_commit
           end
 
           # @param [CartridgeCore::Entities::Commit] commit the commit to be applied
@@ -30,8 +27,7 @@ module CartridgeCore
           def apply_commit!(commit)
             # TODO: might need to perform some checks here before applying
             self.current = current.except(*commit.original_state.keys).merge(commit.final_state)
-            commit_params = { id: commit.id, commit:, applied: true, applied_at: Time.zone.now.to_i }
-
+            commit_params = { commit_id: commit.id, applied: true, applied_at: Time.zone.now.to_i }
             repository_commit = TreeStates::RepositoryCommit.new(**commit_params)
             # Ensure to remove the contained commits if they are present and it's an undo action.
             # This is pretty much the only part of this application I'm quite uncomfortable with
@@ -39,8 +35,8 @@ module CartridgeCore
             # commit is concerning to me. Anyway nothing is ever truly lost on cartridge, I'll find a way to store
             # the deleted commits in another list -> TODO
             slice_off_contained_commits!(commit) if commit.undo?
-            commits.unshift(repository_commit)
-            self.head = commits.first.id
+            applied_commits.unshift(repository_commit)
+            self.head = applied_commits.first.commit_id
           end
 
           def find_commit(commit_id, with_index: false)
@@ -68,9 +64,9 @@ module CartridgeCore
             commits.slice!(0, index)
           end
 
-          def entry_for(target_key)
+          def entry_for(accessors)
             current_key = current.keys.find do |key|
-              key.to_s.include?(target_key.to_s)
+              accessors.all? { key.split('.').include?(_1) }
             end
             [current_key, current[current_key]]
           end

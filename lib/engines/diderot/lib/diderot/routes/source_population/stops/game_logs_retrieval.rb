@@ -5,15 +5,19 @@ module Diderot
     module SourcePopulation
       module Stops
         class GameLogsRetrieval < ::Diderot::Routes::ApplicableStop
+          GAME_RETRIEVAL_BUFFER = 5.seconds
           def call
             # before this stop is run -> it has to check that this is present in state
             # ensure that this is defined in the orchestration.yml, available game ids is populate
             # by the preceeding step (AvailableGamesRetrieval)
             available_game_ids = route_state_get(:available_game_ids)
-            provider.game_class.where(id: available_game_ids).find_each do |game|
+            # discard already retrieved game ids. might not be necessary tbh
+            game_ids = available_game_ids - provider.game_log_class.pluck(:game_id)
+            provider.game_class.where(id: game_ids).find_each do |game|
+              sleep GAME_RETRIEVAL_BUFFER
               ActiveRecord::Base.transaction do
                 game_pbp = provider.fetch_game_play_by_play(game)
-                game_log_attributes = provider.formatter.game_log_attributes_from_json(game_pbp)
+                game_log_attributes = provider.formatter.game_log_attributes_from_json(game_pbp, game)
                 game_box_score = provider.fetch_game_box_score(game)
                 box_score_attributes = provider.formatter.box_score_attributes_from_json(game_box_score)
                 game_log = provider.game_log_class.create!(**game_log_attributes.merge(box_score: box_score_attributes))

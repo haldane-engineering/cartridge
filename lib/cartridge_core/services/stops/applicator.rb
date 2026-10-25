@@ -54,7 +54,7 @@ module CartridgeCore
 
         delegate :route, to: :stop
 
-        attr_reader :tree_state, :stop
+        attr_reader :tree_state, :stop, :opts
 
         def initialize_check(check_class)
           "#{stop.route.name.camelize}::Checks::#{check.camelize}".constantize.new(

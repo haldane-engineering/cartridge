@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema.define(version: 2026_06_30_090749) do
+ActiveRecord::Schema.define(version: 2026_10_22_123224) do
 
   # These are extensions that must be enabled in order to support this database
   enable_extension "plpgsql"
@@ -43,7 +43,7 @@ ActiveRecord::Schema.define(version: 2026_06_30_090749) do
     t.string "external_reference_id"
     t.datetime "scheduled_at"
     t.string "status"
-    t.string "home_timezeone"
+    t.string "home_timezone"
     t.string "away_timezone"
     t.string "season_type"
     t.bigint "season_year"

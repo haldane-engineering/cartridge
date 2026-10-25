@@ -15,7 +15,7 @@ timelines:
           Get all the games played and download their videos + logs
           expectation is to have all the videos sent to S3 and move to
           the next step
-        sequence: [0, [1, 2]]
+        sequence: [0, 1, 2, 3]
         checks:
           - required: [] # changeset here should contain the expected keys
             using: global/balancer
@@ -36,7 +36,7 @@ timelines:
               - required: []
                 using: null
           available_games_retrieval:
-            index: 0
+            index: 1
             parameters: []
             name: available_games_retrieval
             spawns_processes: false
@@ -58,7 +58,7 @@ timelines:
                 using: game_logs_retrieval/balancer
           game_replays_retrieval:
             name: game_replays_retrieval
-            index: 1
+            index: 3
             spawns_processes: true
             schedulable: true
             checks:

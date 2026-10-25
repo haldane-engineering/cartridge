@@ -6,7 +6,8 @@ module Diderot
   module Concerns
     module CommandTools
       module Python
-        include CmdTools
+        include ::Diderot::Concerns::CmdToolable
+
         def py_exec(cmd)
           # for example "yt-dlp -P #{tmpdir} #{download_url}" -> yt-dlp
           cmd_bin = cmd.split(' ').first
@@ -26,7 +27,7 @@ module Diderot
       end
 
       module Brew
-        include CmdTools
+        include ::Diderot::Concerns::CmdToolable
 
         def exec(cmd, bin = nil)
           bin ||= cmd.split(' ').first
@@ -57,10 +58,6 @@ module Diderot
           end
           Open3.capture3(cmd)
         end
-      end
-
-      module CmdTools
-        def command_exists?(cmd) = system("type #{cmd} > /dev/null 2>&1")
       end
     end
   end
