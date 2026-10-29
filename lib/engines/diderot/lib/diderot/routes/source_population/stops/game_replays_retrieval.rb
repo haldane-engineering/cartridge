@@ -7,11 +7,10 @@ module Diderot
         class GameReplaysRetrieval < Diderot::Routes::ApplicableStop
           def call
             available_game_ids = route_state_get(:available_game_ids)
-            date = route.context.parameters.dig(:date) || Time.now.in_time_zone(provider.time_zone)
             available_games = provider.game_class.where(id: available_game_ids)
             retrieve_urls = lambda { |game|
               ->() {
-                provider.replay_url_retriever.call(game, date, stop:)
+                provider.replay_url_retriever.call(game, provider:)
                 changeset_concact(key: :downloaded_game_ids, value: game.id)
               }
             }

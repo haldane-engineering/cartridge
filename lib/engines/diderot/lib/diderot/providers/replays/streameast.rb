@@ -1,13 +1,20 @@
 # frozen_string_literal: true
 
+require 'capybara/dsl'
+require 'selenium-webdriver'
+
 module Diderot
   module Providers
     module Replays
-      class StreamEast
+      class Streameast
+        # include ::Diderot::Providers::Concerns::ContentStreamable
+
         include Capybara::DSL
         include ::Diderot::Concerns::CommandTools::Brew
 
-        def initialize(game, provider:)
+        def self.call(game, **opts) = new(game, **opts).call
+
+        def initialize(game, provider: nil)
           @game = game
           @provider = provider
           @stream_status = initial_stream_status
@@ -29,18 +36,21 @@ module Diderot
           # <i class="fas fa-basketball-ball se-sport-fa--sport se-mob-card-icon"></i>
           # <span class="se-mob-card-label">NBA</span>
           # </a>
+          sleep 5
           click_link(href: configuration[:nba_anchor_href])
           switch_to_window(original_window)
           html_content = html_content = Nokogiri::HTML(page.body)
           # golden-state-warriors-vs-cleveland-cavaliers
           # cleveland-cavaliers-vs-golden-state-warriors
           g_links = [game.participants, game.participants.reverse].flat_map(&->(teams) {
-            teams.map(&->(team) { team.full_name.downcase.tr(' ', '-') }).join('-vs-')
+            teams.map(&->(team) {
+              team = ::Nba::TeamDecorator.decorate(team)
+              team.full_name.downcase.tr(' ', '-')
+            }).join('-vs-')
           })
-          stream_links = g_links.map(&->(link) { html_content.at_xpath("//a[contains(href(), '#{link}')]") }).compact
-          halt!(:failed_replay_capture_error) unless stream_links
-          s_link_anchor = html_content.at_xpath("//a[contains(href(), '#{stream_links.first}')]")
-          page.find(:xpath, s_link_anchor.path).click
+          stream_links = g_links.map(&->(link) { html_content.at_xpath("//a[contains(@href, '#{link}')]") }).compact
+          halt!(:failed_replay_capture_error) if stream_links.empty?
+          page.find(:xpath, stream_links.first.path).click
           switch_to_window(original_window)
           # wait for stream to load -> remember to factor in this buffer when pruning the stream -> or generally add this
           # as a padding to the slicing start and end points
@@ -49,7 +59,8 @@ module Diderot
           sleep configuration[:stream_load_buffer]
           start_screen_capture!
         ensure
-          Capybara.reset_sessions!
+          teardown_browser!
+          stop_virtual_display!
         end
 
         private
@@ -77,13 +88,33 @@ module Diderot
           # set up virtual audo capture using pulse audio, the following command creates a virtual speaker
           # and uses pulse audio to capture the sound output from the current view context
           ENV['DISPLAY'] = ':99'
+          start_virtual_display!
           cmd = <<~CMD
-            Xvfb :99 -screen 0 1920x1080x24 &
             pulseaudio -D --exit-idle-time=-1
             pactl load-module module-null-sink sink_name=virtual_speaker
             pactl set-default-sink virtual_speaker
           CMD
-          cmd.split("\n").map(&:strip).each(&->(cmnd) { shell_exec(cmnd) })
+          cmd.split("\n").map(&:strip).each(&->(cmnd) { exec(cmnd) })
+        end
+
+        def start_virtual_display!
+          exec(':', 'Xvfb')
+          _, _, _, wait_thread = exec(
+            'Xvfb :99 -screen 0 1920x1080x24',
+            nil,
+            spawn: true,
+            install_with: 'brew install --cask xquartz',
+          )
+          @xvfb_pid = wait_thread.pid
+          Process.detach(@xvfb_pid)
+        end
+
+        def stop_virtual_display!
+          return unless @xvfb_pid
+
+          Process.kill('TERM', @xvfb_pid)
+        rescue Errno::ESRCH
+          nil
         end
 
         def register_selenium_driver
@@ -92,9 +123,16 @@ module Diderot
             options.add_argument('--disable-gpu')
             options.add_argument('--no-sandbox')
             options.add_argument('--window-size=1920,1080')
-            Capybara::Selenium::Driver.new(app, browser: :chrome) # headless_chrome in prod
+            # Hide the "Chrome is being controlled by automated software" banner
+            options.add_argument('--disable-blink-features=AutomationControlled')
+            options.exclude_switches
+            options.add_preference(:use_automation_extension, false)
+            options.add_argument('--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36')
+            Capybara::Selenium::Driver.new(app, browser: :chrome, options:) # headless_chrome in prod
           end
-          Capybara.javascript_driver = :selenium_chrome
+          Capybara.default_driver = :selenium_chrome
+          Capybara.current_driver = :selenium_chrome
+          Capybara.run_server = false
         end
 
         def configuration
@@ -103,6 +141,7 @@ module Diderot
             nba_anchor_href:    '/nba-streams/',
             stream_load_buffer: 6.seconds,
             unmute_button_text: 'UNMUTE ME',
+            stream_ended_text:  'Stream ended',
           }
         end
 
@@ -131,10 +170,16 @@ module Diderot
           Process.wait(pid)
         end
 
+        def teardown_browser!
+          Capybara.current_session.driver.quit
+        rescue StandardError => e
+          Rails.logger.warn("[Streameast] browser teardown failed: #{e.class}: #{e.message}")
+        end
+
         def initial_stream_status = :queued
         def start_stream! = @stream_status = :started
         def end_stream! = @stream_status = :ended
-        def stream_ended? = @stream_status == :eneded
+        def stream_ended? = @stream_status == :ended
       end
     end
   end

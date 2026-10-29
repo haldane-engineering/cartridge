@@ -29,7 +29,7 @@ module Diderot
       module Brew
         include ::Diderot::Concerns::CmdToolable
 
-        def exec(cmd, bin = nil)
+        def exec(cmd, bin = nil, **opts)
           bin ||= cmd.split(' ').first
           unless command_exists?(bin)
             unless command_exists?('brew')
@@ -54,9 +54,9 @@ module Diderot
               eval "$($BREW_PATH/bin/brew shellenv)"
               )
             end
-            system("HOMEBREW_NO_AUTO_UPDATE=1 brew install #{bin}")
+            system("HOMEBREW_NO_AUTO_UPDATE=1 #{opts[:install_with] || "brew install #{bin}"}")
           end
-          Open3.capture3(cmd)
+          opts[:spawn] ? Open3.popen3(cmd) : Open3.capture3(cmd)
         end
       end
     end
