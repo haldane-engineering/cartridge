@@ -12,7 +12,7 @@ module Diderot
             composed_game_ids = state_get(:composed_game_ids) || []
             composable_game_ids = logs.map(&:game_id) - composed_game_ids
             # hash to get the folder when the source video is stored
-            video_paths = composable_game_ids.map(&->(log) { Digest::SHA256.hexdigest(log.game_id) })
+            video_paths = composable_game_ids.map(&->(game) { Digest::SHA256.hexdigest(game.external_id) })
             composable_game_ids.zip(video_paths).each do |(game_id, dir_path)|
               # dir_path here is the hashed id of the game - which serves as a store for all the files
               # during the composition process -> at this point the preceeding stop (source_population#game_replays_retriever)

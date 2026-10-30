@@ -54,7 +54,9 @@ module Diderot
           download_url = "#{configuration[:okru_video_base]}/#{iframe_src.split("/").last}"
           # start the download and return the file path (even with capybara and league pass )
           # invoke yt-dlp with the url
-          tmpdir = Dir.mkdir(Digest::SHA256.hexdigest(game.external_id.to_s + Time.zone.now.to_s))
+          tmpdir = Dir.mkdir(Digest::SHA256.hexdigest(game.external_id.to_s))
+          
+
           # https://github.com/yt-dlp/yt-dlp
           unless command_exists?('yt-dlp')
             unless command_exists?('uv')

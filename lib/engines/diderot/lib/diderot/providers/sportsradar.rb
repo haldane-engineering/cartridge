@@ -17,6 +17,8 @@ module Diderot
           decorators
           game_log_class
           replay_url_retriever
+          events_prefix_gap
+          events_suffix_gap
         ).freeze
         DISTRIBUTION_CHANNELS = %i(youtube).index_with(&:itself)
         HIGHLIGHTABLE_EVENT_TYPES = %w(twopointmade threepointmade).freeze
@@ -54,8 +56,8 @@ module Diderot
           JSON.parse(response)
         end
 
-        def generate_highlight_fragments(events, fragment_class)
-          events = events.select(&->(event) { highlightable_event_types.include?(event['event_type']) })
+        def generate_highlight_fragments(game_logs, fragment_class)
+          events = game_logs['events'].select(&->(event) { highlightable_event_types.include?(event['event_type']) })
           # This is not a correct implementation - we should use the time diff between the game start time
           # and the time in the execution context
           prefix_padding = ->(time_string, gap) { Time.zone.parse(time_string) - gap }
@@ -63,8 +65,8 @@ module Diderot
           events.map do |event|
             fragment_class.new(
               title: event['description'],
-              start: prefix_padding.call(event['wall_clock'], configuration.events_prefix_gap.minutes),
-              end: affix_padding.call(event['wall_clock'], configuration.events_suffix_gap.minutes),
+              start: prefix_padding.call(event['wall_clock'], configuration.events_prefix_gap.seconds),
+              end: affix_padding.call(event['wall_clock'], configuration.events_suffix_gap.seconds),
             )
           end
         end
@@ -113,6 +115,8 @@ module Diderot
             },
             timezone: 'US/Eastern',
             images_provider: ::Diderot::Providers::Images::Sportsdb.new,
+            events_prefix_gap: 7,
+            events_suffix_gap: 8,
             decorators: {
               team: ::Nba::TeamDecorator,
             },
