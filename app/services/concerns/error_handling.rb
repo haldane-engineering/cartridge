@@ -19,7 +19,7 @@ module ErrorHandling
     #
     # @yield [void] The block of code to execute.
     # @return [Context] The context after execution.
-    def safely_execute(rescue_from = [], &block)
+    def safely_execute(rescue_from: [], &block)
       run_checks! if should_run_checks?
       block.call
       context
