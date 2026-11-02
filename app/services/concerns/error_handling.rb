@@ -12,18 +12,18 @@ module ErrorHandling
       ActiveModel::UnknownAttributeError,
       ActiveRecord::StatementInvalid,
       BaseService::InvalidInputError,
-      BaseService::ServiceError
+      BaseService::ServiceError,
     ].freeze
 
     # Safely executes a block of code, running checks if needed.
     #
     # @yield [void] The block of code to execute.
     # @return [Context] The context after execution.
-    def safely_execute(&block)
+    def safely_execute(rescue_from: [], &block)
       run_checks! if should_run_checks?
       block.call
       context
-    rescue *ERROR_CLASSES => e
+    rescue *ERROR_CLASSES, *rescue_from => e
       fail!(error: e)
     end
 

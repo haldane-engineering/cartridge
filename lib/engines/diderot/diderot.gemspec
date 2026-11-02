@@ -21,7 +21,7 @@ Gem::Specification.new do |spec|
   spec.files = Dir['{app,config,db,lib}/**/*', 'MIT-LICENSE', 'Rakefile', 'README.md']
 
   spec.add_dependency 'annotate', '~> 3.2.0'
-  spec.add_dependency 'capybara', '~>3.1.0'
+  spec.add_dependency 'capybara', '~> 3.40'
   spec.add_dependency 'concurrent-ruby', '1.3.4'
   spec.add_dependency 'concurrent-ruby-ext'
   spec.add_dependency 'httparty', '0.24.2'

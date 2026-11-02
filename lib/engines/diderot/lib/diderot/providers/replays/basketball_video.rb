@@ -42,7 +42,7 @@ module Diderot
           game_path = game_path_container['href']
           html_content = Nokogiri::HTML(safely_open(URI.parse("#{configuration[:url]}#{game_path}")))
           # The button with the full game is typically the first one containing the text "Watch"
-          replays_link = html_content.at_xpath("//a[span[normalize-space()='#{configuration[:game_text]}']]")['href']
+          replays_link = html_content.at_xpath("//a[span[normalize-space()='#{configuration[:game_link_container_text]}']]")['href']
           # Visit the contained link: here's an example
           # https://guidedesgemmes.com/effets-de-la-pierre-d-emeraude-en-combien-de-jours-les-ressent-on
           # The videos themselves are iframes referencing https://ok.ru/ hyeperlinks
@@ -54,7 +54,9 @@ module Diderot
           download_url = "#{configuration[:okru_video_base]}/#{iframe_src.split("/").last}"
           # start the download and return the file path (even with capybara and league pass )
           # invoke yt-dlp with the url
-          tmpdir = Dir.mkdir(Digest::SHA256.hexdigest(game.external_id.to_s + Time.zone.now.to_s))
+          tmpdir = Dir.mkdir(Digest::SHA256.hexdigest(game.external_id.to_s))
+          
+
           # https://github.com/yt-dlp/yt-dlp
           unless command_exists?('yt-dlp')
             unless command_exists?('uv')
@@ -63,7 +65,8 @@ module Diderot
             system('uv tool install yt-dlp')
           end
           # this should take quite some time to complete downloading
-          yt_dlp_flags = '--socket-timeout 60 --fragment-retries 50 --retries 10'
+          # yt_dlp_flags = '--socket-timeout 60 --fragment-retries 50 --retries 10'
+          yt_dlp_flags = '-f hls-974 --socket-timeout 60 --fragment-retries 50 --retries 10'
           system("yt-dlp #{yt_dlp_flags} -P #{tmpdir} #{download_url}")
         end
 
@@ -78,7 +81,7 @@ module Diderot
             url:                      'https://basketball-video.com',
             game_link_container_text: 'Watch',
             okru_video_base:          'https://ok.ru/video', # ex: https://ok.ru/video/14564061022892
-            max_page_retries:         3,
+            max_page_retries:         8,
           }
         end
 

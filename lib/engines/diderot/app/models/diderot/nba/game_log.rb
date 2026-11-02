@@ -4,6 +4,8 @@ module Diderot
   module Nba
     class GameLog < ApplicationRecord
       self.table_name = 'diderot_nba_game_logs'
+
+      belongs_to :game, class_name: 'Diderot::Nba::Game'
     end
   end
 end
