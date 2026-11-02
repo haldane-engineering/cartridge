@@ -19,9 +19,10 @@ module Diderot
 
           def self.call(**kwargs) = new(**kwargs).call
 
-          def initialize(source_path:, game:)
+          def initialize(source_path:, game:, provider:)
             @source_path = source_path
             @game = game
+            @provider = provider
           end
 
           def call
@@ -30,7 +31,7 @@ module Diderot
               _, err, status = generate_time_manifest!(directory_path)
               raise FragmentExtractionError, err unless status.success?
 
-              ctx = Diderot::Routes::HighlightComposition::Services::GameLogParser.call(game: @game)
+              ctx = Diderot::Routes::HighlightComposition::Services::GameLogParser.call(game:, provider:)
               raise FragmentExtractionError, ctx.errors.first.to_s unless ctx.success?
 
               context.succeed(ctx.payload)
@@ -39,7 +40,7 @@ module Diderot
 
           private
 
-          attr_reader :source_path
+          attr_reader :source_path, :game, :provider
 
           def generate_time_manifest!(directory_path)
             game_clock_bound_box = locate_game_clock!(directory_path)
@@ -83,7 +84,7 @@ module Diderot
             row_entries = stdout.lines.drop(1).map(&->(line) { line.chomp.split("\t") })
             # columns: ...left(6) top(7) width(8) height(9) conf(10) text(11)
             row = row_entries.find(&->(cols) {
-              cols[TEXT_LOCATION_INDEX]&.match?(CLOCK_PATTERN)
+              cols[TEXT_LOCATION_INDEX]&.match?(@provider.game_clock_attributes[:pattern])
             })
             return unless row
 

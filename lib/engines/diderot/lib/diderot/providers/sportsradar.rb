@@ -19,9 +19,11 @@ module Diderot
           replay_url_retriever
           events_prefix_gap
           events_suffix_gap
+          game_clock_attributes
         ).freeze
         DISTRIBUTION_CHANNELS = %i(youtube).index_with(&:itself)
         HIGHLIGHTABLE_EVENT_TYPES = %w(twopointmade threepointmade).freeze
+        EVENT_TYPES_DURATION = { twopointmade: 5, threepointmade: 5 }
 
         # rubocop:disable Style/ClassMethodsDefinitions
         def self.league
@@ -56,18 +58,26 @@ module Diderot
           JSON.parse(response)
         end
 
-        def generate_highlight_fragments(game_logs, fragment_class)
+        def generate_highlight_fragments(fragment_class:, game_logs:, timestamps:)
+          # preselect the events: the preselection should return a list of Fragment objects
+          # for nba highlights, I imagine we add a padding: 10 seconds after the previous event.
+          # and 5 seconds into the next. These numbers should be configurable.
+          # The current implementation naively adds 5 seconds pre and 3 seconds post event, which might work for now
+          # but to make the highlights more fleshy, I imagine we want to change this. TODO: Add padding to start and end
+          # each fragment
           events = game_logs['events'].select(&->(event) { highlightable_event_types.include?(event['event_type']) })
           # This is not a correct implementation - we should use the time diff between the game start time
           # and the time in the execution context
-          prefix_padding = ->(time_string, gap) { Time.zone.parse(time_string) - gap }
-          affix_padding = ->(time_string, gap) { Time.zone.parse(time_string) + gap }
           events.map do |event|
-            fragment_class.new(
-              title: event['description'],
-              start: prefix_padding.call(event['wall_clock'], configuration.events_prefix_gap.seconds),
-              end: affix_padding.call(event['wall_clock'], configuration.events_suffix_gap.seconds),
-            )
+            fragment =  fragment_class.new(**event.slice(*%w(description period)))
+            time_fragment = timestamps[fragment.period].find(&->(t_fragment) {
+              t_fragment.game_clock == event['clock']
+            })
+            next fragment.fail! unless time_fragment
+
+            start = time_fragment.real_video_time.to_i - configuration.events_prefix_gap
+            stop = time_fragment.real_video_time.to_i + EVENT_TYPES_DURATION[event['event_type'].to_sym]
+            fragment.assign_attributes!(start:, stop:, status: :success)
           end
         end
 
@@ -115,8 +125,9 @@ module Diderot
             },
             timezone: 'US/Eastern',
             images_provider: ::Diderot::Providers::Images::Sportsdb.new,
-            events_prefix_gap: 7,
+            events_prefix_gap: 5,
             events_suffix_gap: 8,
+            game_clock_attributes: { type: :fractional, fraction_count: 4, pattern: /\A(1[0-2]|\d):[0-5]\d\z/ },
             decorators: {
               team: ::Nba::TeamDecorator,
             },
@@ -226,7 +237,10 @@ module Diderot
             match_relevant_events = ->(event) {
               configuration.settings.dig(:persistable_game_log_event_types).include?(event['event_type'])
             }
-            game_events = game_log_json.dig('periods').pluck('events').flatten
+            game_events = game_log_json.dig('periods').flat_map.with_index do |period, index|
+              period['events'].map(&->(event) { event.merge(period: index) })
+            end.flatten
+
             game_log_json.slice(*Diderot::Nba::GameLog.attribute_names).merge(
               game_id: game.id,
               raw_json: game_log_json.merge(events: game_events.select(&match_relevant_events)),
