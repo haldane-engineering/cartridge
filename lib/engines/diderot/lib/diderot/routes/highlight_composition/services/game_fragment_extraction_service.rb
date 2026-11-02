@@ -7,7 +7,7 @@ module Diderot
         class GameFragmentExtractionService < BaseService
           include Diderot::Concerns::CommandTools::Python
 
-          FRAGMENT_KEYS = %i(quarter game_clock real_video_time)
+          FRAGMENT_KEYS = %i(game_clock real_video_time)
           CLOCK_PATTERN = /\A(1[0-2]|\d):[0-5]\d\z/
           PROBE_START = 600
           PROBE_STEP = 60 # increment by 2 miunutes in every loop
@@ -29,7 +29,11 @@ module Diderot
               directory_path = Rails.root.join(Digest::SHA256.hexdigest(@game.external_id))
               _, err, status = generate_time_manifest!(directory_path)
               raise FragmentExtractionError, err unless status.success?
-              # chunk_log_into_fragments!
+
+              ctx = Diderot::Routes::HighlightComposition::Services::GameLogParser.call(game: @game)
+              raise FragmentExtractionError, ctx.errors.first.to_s unless ctx.success?
+
+              context.succeed(ctx.payload)
             end
           end
 
@@ -55,8 +59,6 @@ module Diderot
             probe_path = "#{directory_path}/probe.png"
             matches = []
             MAX_PROBES.times do |index|
-              # every n seconds - take a screenshot of the current frame in the video
-              # and write to probe.png
               seek = PROBE_START + (index * PROBE_STEP)
               _, _, status = py_exec("ffmpeg -y -ss #{seek} -i '#{@source_path}' -frames:v 1 '#{probe_path}'")
               raise FragmentExtractionError unless status.success? && File.exist?(probe_path)
@@ -64,13 +66,13 @@ module Diderot
               box = detect_clock_box(probe_path)
               next unless box
 
-              matches.select!(&->(match) { match_box_position(match, box) })
+              matches.select!(&->(match) { match_box_position?(match, box) })
               matches << box
               return box if matches.size <= REQUIRED_MATCHES
             end
           end
 
-          def match_box_position(match, box)
+          def match_box_position?(match, box)
             match[:left] - box[:left] <= POSITION_TOLERANCE && match[:top] - box[:top] <= POSITION_TOLERANCE
           end
 
@@ -100,8 +102,6 @@ module Diderot
               height: height + (pad_rest * 2),
             }
           end
-
-          Fragment = Struct.new(*FRAGMENT_KEYS, keyword_init: true)
 
           class FragmentExtractionError < ArgumentError; end
         end
