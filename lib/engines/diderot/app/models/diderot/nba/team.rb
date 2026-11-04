@@ -7,6 +7,10 @@ module Diderot
 
       has_many :memberships, class_name: 'Diderot::NBA::TeamMembership'
       has_many :players, through: :memberships
+
+      def full_name
+        @full_name ||= "#{market} #{name}"
+      end
     end
   end
 end

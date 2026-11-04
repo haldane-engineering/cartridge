@@ -11,10 +11,6 @@ module Diderot
 
       has_one :game_log, class_name: '::Diderot::Nba::GameLog', dependent: :nullify
 
-      def full_identifier
-        raise NotImplementedError
-      end
-
       def participants = [away_team, home_team]
 
       # ################## MOVE ALL OF THESE TO A DECORATOR
@@ -27,7 +23,12 @@ module Diderot
       end
 
       def full_identifier
-        raise NotImplementedError
+        @full_identifier ||= begin
+          name_parts = [home_team, away_team].map(&:full_name).join(' vs ')
+          name_salt = ' Full game highlights '
+          date_parts = scheduled_at.strftime('%B %d, %Y')
+          [name_parts, name_salt, date_parts].join(' ').gsub(' ', '-')
+        end
       end
 
       # @param [String] context - search context for the video (local returns the local

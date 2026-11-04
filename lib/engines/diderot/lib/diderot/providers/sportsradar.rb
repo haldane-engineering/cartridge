@@ -23,7 +23,7 @@ module Diderot
         ).freeze
         DISTRIBUTION_CHANNELS = %i(youtube).index_with(&:itself)
         HIGHLIGHTABLE_EVENT_TYPES = %w(twopointmade threepointmade).freeze
-        EVENT_TYPES_DURATION = { twopointmade: 5, threepointmade: 5 }
+        EVENT_TYPES_DURATION = { twopointmade: 7, threepointmade: 9 }
 
         # rubocop:disable Style/ClassMethodsDefinitions
         def self.league
