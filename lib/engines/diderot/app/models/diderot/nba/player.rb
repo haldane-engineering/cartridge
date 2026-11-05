@@ -17,6 +17,10 @@ module Diderot
   module Nba
     class Player < ApplicationRecord
       self.table_name = 'diderot_nba_players'
+
+      def full_name
+        @full_name ||= "#{first_name} #{last_name}"
+      end
     end
   end
 end

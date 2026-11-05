@@ -13,7 +13,7 @@ module Diderot
           # @param [Providers::Provider]
           def spawn!(game, provider)
             # When we get games from any source the expectation is that the provider is able to
-            # suggest two players from the 'warring' teams -> These two players should be of relevance to
+            # suggest two players from the facing teams -> These two players should be of relevance to
             # the viewership and the game in context (players with the most impact (activity score) -e.g
             # in the NBA that would perhaps be the player with the most points. I think that's an implementation that's
             # not nuanced enough but works at the moment. Will implement. A more comprehensive and apposite implementation
@@ -21,7 +21,7 @@ module Diderot
             # just impact! TODO a bit later. I'm tired.
 
             # WORKFLOW
-            # get the highlight video -> should be dist/{game_hash}/output.mp4
+            # get the highlight video -> should be dest/{game_hash}/output.mp4
             # use commandtools to get a random section of the video, take screenshot
             # comb through the box score and find the players with the right external id
             # fetch their images -> per membership and turn to base 64

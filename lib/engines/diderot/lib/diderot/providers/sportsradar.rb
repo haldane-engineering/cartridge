@@ -20,7 +20,9 @@ module Diderot
           events_prefix_gap
           events_suffix_gap
           game_clock_attributes
+          resource_assets_manager
         ).freeze
+
         DISTRIBUTION_CHANNELS = %i(youtube).index_with(&:itself)
         HIGHLIGHTABLE_EVENT_TYPES = %w(twopointmade threepointmade).freeze
         EVENT_TYPES_DURATION = { twopointmade: 7, threepointmade: 9 }
@@ -66,8 +68,6 @@ module Diderot
           # but to make the highlights more fleshy, I imagine we want to change this. TODO: Add padding to start and end
           # each fragment
           events = game_logs['events'].select(&->(event) { highlightable_event_types.include?(event['event_type']) })
-          # This is not a correct implementation - we should use the time diff between the game start time
-          # and the time in the execution context
           events.map do |event|
             fragment =  fragment_class.new(**event.slice(*%w(description period)))
             time_fragment = timestamps[fragment.period].find(&->(t_fragment) {
@@ -124,10 +124,11 @@ module Diderot
               persistable_game_log_event_types: %w(twopointmade twopointmiss threepointmade threepointmiss),
             },
             timezone: 'US/Eastern',
-            images_provider: ::Diderot::Providers::Images::Sportsdb.new,
+            images_provider: ::Diderot::Providers::Services::Sportsradar::Nba::ResourceAssetsManager.new,
             events_prefix_gap: 5,
             events_suffix_gap: 8,
             game_clock_attributes: { type: :fractional, fraction_count: 4, pattern: /\A(1[0-2]|\d):[0-5]\d\z/ },
+            resource_assets_manager: ::Diderot::Providers::Services::Sportsradar::Nba::ResourceAssetsManager.new,
             decorators: {
               team: ::Nba::TeamDecorator,
             },
