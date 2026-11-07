@@ -12,7 +12,7 @@ module Diderot
       end
 
       def request_from_url(url, body, method:)
-        const_get("Net::HTTP::#{method.capitalize}").new(url).tap do |request|
+        "Net::HTTP::#{method.capitalize}".constantize.new(url).tap do |request|
           request['Content-Type'] = 'application/json'
           request.body = body.to_json
         end

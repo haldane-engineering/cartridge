@@ -20,9 +20,9 @@ module Diderot
           Open3.capture3(cmd)
         end
 
-        def bin_exec(cmd, args)
-          cmd_path = Rails.root.join("bin/py/#{cmd}.py")
-          Open3.capture3("#{cmd_path} #{args}")
+        def pybin_exec(cmd, args = nil, stdin: nil)
+          cmd_path = Rails.root.join("lib/engines/diderot/bin/py/#{cmd}.py").to_s
+          Open3.capture3('python3', cmd_path, *Array(args), stdin_data: stdin.to_s)
         end
       end
 

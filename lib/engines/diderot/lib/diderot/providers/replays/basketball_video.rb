@@ -55,7 +55,7 @@ module Diderot
           # start the download and return the file path (even with capybara and league pass )
           # invoke yt-dlp with the url
           tmpdir = Dir.mkdir(Digest::SHA256.hexdigest(game.external_id.to_s))
-          
+          # There's a bug here, where yt-dlp just writes to a folder /0 - FIXME.
 
           # https://github.com/yt-dlp/yt-dlp
           unless command_exists?('yt-dlp')
@@ -66,8 +66,9 @@ module Diderot
           end
           # this should take quite some time to complete downloading
           # yt_dlp_flags = '--socket-timeout 60 --fragment-retries 50 --retries 10'
+          FileUtils.mkdir_p("#{tmpdir}/source/")
           yt_dlp_flags = '-f hls-974 --socket-timeout 60 --fragment-retries 50 --retries 10'
-          system("yt-dlp #{yt_dlp_flags} -P #{tmpdir} #{download_url}")
+          system("yt-dlp #{yt_dlp_flags} -P #{tmpdir}/source -o out.mp4 #{download_url}")
         end
 
         private

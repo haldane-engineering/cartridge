@@ -53,6 +53,10 @@ class Context
     @success
   end
 
+  def failed?
+    !success?
+  end
+
   # Returns a message string, combining messages or errors based on success state.
   #
   # @return [String] The combined success messages or error messages.

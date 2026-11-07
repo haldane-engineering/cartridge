@@ -5,8 +5,12 @@ module Diderot
     class Team < ApplicationRecord
       self.table_name = 'diderot_nba_teams'
 
-      has_many :memberships, class_name: 'Diderot::NBA::TeamMembership'
+      has_many :memberships, class_name: '::Diderot::Nba::TeamMembership'
       has_many :players, through: :memberships
+
+      def full_name
+        @full_name ||= "#{market} #{name}"
+      end
     end
   end
 end
