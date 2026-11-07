@@ -18,7 +18,7 @@ module Diderot
       # videos should be saved in different folders -> I guess a more sensible option
       # will be the hash_commit as the folder name
       def assets_directory(salt = nil)
-        game_digest = Digest::SHA256.hexdigest(log.game_id)
+        game_digest = Rails.root.join(Digest::SHA256.hexdigest(external_id)).to_s
         salt ? game_digest + "_#{salt}" : game_digest
       end
 

@@ -6,6 +6,7 @@ module Diderot
       module Processes
         class CoverImageGeneration
           include Diderot::Concerns::CommandTools::Python
+          include ::Diderot::Concerns::ExternalRequestable
 
           def self.spawn!(*args) = new.spawn!(*args)
 
@@ -27,39 +28,62 @@ module Diderot
             # fetch their images -> per membership and turn to base 64
             # fetch the points_scored -> provider sends this from the box score json
             # convert to json
-            path = game.output_video_path
-            duration = %x(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 #{path})
-            gap = rand(0..duration.to_i)
-            py_exec("ffmpeg -ss #{gap} -i #{path} -vframes 1 -q:v 2 #{game.assets_directory}/background_cover.jpg")
-            # game.participants always returns the away team first
+            @game = game
+            @provider = provider
             hero_player_external_ids = provider.infer_most_impactful_players(game)
-            hero_player_photos = game.participants.zip(hero_player_external_ids).map(&->(team, player_external_id) {
+            hero_player_photos = game.participants.zip(hero_player_external_ids).map(&->((team, player_external_id)) {
               team.memberships.includes(:player).where(player: { external_id: player_external_id })
-                                                .select(:photo_url).photo_url
+               .select(*%i(player_id photo_url)).first&.photo_url
             })
-            background_image_base64 = Base64.strict_encode64(File.read(
-              "#{game.assets_directory}/background_cover.jpg",
-              mode: 'rb',
-            ))
-            league_image_base64 = game.league.logo_base64
-            game_context = GameContext.new(
-              destination: game.assets_directory,
-              league_image_base64:,
-              background_image_base64:,
-            )
-            url_to_base_64 = ->(url) { Base64.strict_encode64(Net::HTTP.get(URI(url))) }
-            hero_images_64 = hero_player_photos.map(&url_to_base_64)
+            game_context = GameContext.new(**game_context_params)
+            hero_images_64 = hero_player_photos.map(&method(:image_url_to_base64))
             participants = game.participants.zip(hero_images_64).map(&->((team, image64)) {
-              points_scored = provider.infer_points_scored(game, team)
-              GameParticipant.new(ticker: team.alias, name: team.full_name, hero_image_base64: image64, points_scored:)
+              GameParticipant.new(**game_participant_args(team, image64))
             })
             image_generator_args = { participants:, game_context: }
-            _, err, status = bin_exec(:cover_image_generator, image_generator_args.to_json)
+            _, err, status = pybin_exec(:cover_image_generator, stdin: image_generator_args.to_json)
             halt!(:cover_image_generation_error, err) unless status
           end
 
-          GameContext = Struct.new(*%i(destination background_image_base64 league_image_base64), keyword_init: true)
-          GameParticipant = Struct.new(*%i(team_ticker team_name hero_image_base64 total_points_scored))
+          private
+
+          GameContext = Struct.new(
+            *%i(destination background_image_base64 league_image_base64 game_scheduled_at),
+            keyword_init: true,
+          )
+          GameParticipant = Struct.new(
+            *%i(team_ticker team_name hero_image_base64 total_points_scored),
+            keyword_init: true,
+          )
+
+          def image_url_to_base64(url)
+            response = Net::HTTP.get_response(
+              URI.parse(url),
+              { 'User-Agent' => 'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:31.0) Gecko/20100101 Firefox/31.0' },
+            )
+            Base64.strict_encode64(response.body)
+          end
+
+          def game_context_params
+            @game_context_params ||= begin
+              bg_base64 = Base64.strict_encode64(File.read("#{@game.assets_directory}/probe.png", mode: 'rb'))
+              {
+                destination:             @game.assets_directory,
+                league_image_base64:     @game.league.logo_base64,
+                background_image_base64: bg_base64,
+                game_scheduled_at:       @game.scheduled_at.strftime('%B %d, %Y').upcase,
+              }
+            end
+          end
+
+          def game_participant_args(team, image64)
+            {
+              team_ticker:         team.alias,
+              team_name:           team.full_name,
+              hero_image_base64:   image64,
+              total_points_scored: @provider.infer_points_scored(@game, team),
+            }
+          end
         end
       end
     end

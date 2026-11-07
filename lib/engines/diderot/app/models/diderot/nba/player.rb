@@ -10,7 +10,7 @@
 #  photo_url   :string
 #  created_at  :datetime         not null
 #  updated_at  :datetime         not null
-#  external_id :integer
+#  external_id :text
 #  league_id   :integer
 #
 module Diderot

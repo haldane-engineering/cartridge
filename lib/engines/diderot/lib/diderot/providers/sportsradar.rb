@@ -88,8 +88,9 @@ module Diderot
           # who's scored the most points. I expounded on a better approach in the cover image generation process.
           # Anyway, we've been proovided the (scoring, assists and rebound) leaders by sportsradar in the boxscore attribute.
           # see https://developer.sportradar.com/basketball/reference/nba-game-boxscore
-          point_leaders = game.game_log.box_score.slice(*%w(away home)).values.pluck(%w(leaders points))
-          point_leaders.flatten.pluck('id') # ID from sportsradar
+          point_leaders = game.game_log.box_score.slice(*%w(away home)).values.pluck(*%w(leaders points)).flatten
+          point_leaders = point_leaders.map(&->(entry) { entry.dig('points', 0, 'id') if entry.is_a?(Hash) })
+          point_leaders.compact # ID from sportsradar
         end
 
         # @param [Diderot::Nba::Game] game (in context)
@@ -97,7 +98,7 @@ module Diderot
         def infer_points_scored(game, team)
           match_team = ->(team_box_score) { team_box_score['id'] == team.external_id }
           # game.participants returns the away team first.
-          game.game_log.box_score.slice(*%w(away home)).values(&match_team)['points']
+          game.game_log.box_score.slice(*%w(away home)).values(&match_team).first['points']
         end
 
         def formatter = Formatter.new(configuration)
