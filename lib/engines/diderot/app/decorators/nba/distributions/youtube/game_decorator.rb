@@ -22,12 +22,12 @@ module Nba
         end
 
         def description
-          @description ||= <<-str
-              #{preamble_tags.join(", ")}
+          @description ||= <<~str
+            #{preamble_tags.join(", ")}
 
-              #{full_identifier.gsub("-", " ")}.
+            #{full_identifier.gsub("-", " ")}.
 
-              #{COPYRIGHT_DISCLAIMER}
+            #{COPYRIGHT_DISCLAIMER}
           str
         end
 
