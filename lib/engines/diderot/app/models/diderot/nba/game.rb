@@ -37,7 +37,7 @@ module Diderot
       def output_video_path(context: :local, salt: nil)
         case context
         when :local
-          assets_directory(salt) + "/#{full_identifier}"
+          assets_directory(salt) + "/dest/#{full_identifier}.mp4"
         else
           raise NotImplementedEerror
         end

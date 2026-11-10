@@ -9,3 +9,7 @@
 /test/dummy/storage/
 /test/dummy/tmp/
 .byebug_history
+
+# youtube oauth secrets
+/bin/py/client_secrets.json
+/bin/py/youtube_token.json

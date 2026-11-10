@@ -5,6 +5,7 @@ module Diderot
     self.table_name = 'diderot_platform_distributions'
 
     belongs_to :resource, polymorphic: true
+    belongs_to :league, class_name: 'Diderot::League'
   end
 end
 
