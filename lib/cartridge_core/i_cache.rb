@@ -65,6 +65,8 @@ module CartridgeCore
       adapter.snapshot!(*args)
     end
 
+    delegate :root_get, to: :adapter
+
     private
 
     attr_reader :adapter
