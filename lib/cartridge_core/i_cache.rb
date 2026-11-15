@@ -65,6 +65,8 @@ module CartridgeCore
       adapter.snapshot!(*args)
     end
 
+    delegate :root_get, to: :adapter
+
     private
 
     attr_reader :adapter
@@ -98,6 +100,7 @@ module CartridgeCore
         id:                            SecureRandom.hex(8),
         head:                          Factory.initial_timestamp,
         definition_id:                 definition_hash,
+        execution_state:               ::CartridgeCore::Entities::TREE_EXECUTION_STATES[:initial],
         definitions:                   [{
           raw:       definition_json,
           id:        definition_hash,
@@ -109,6 +112,7 @@ module CartridgeCore
         stop_processes:                [],
         stop_process_units:            [],
         scheduled_timeline_executions: [],
+        execution_schedules:           [],
       }
     end
 
@@ -148,6 +152,7 @@ module CartridgeCore
           sample_stop_process = build(::CartridgeCore::Entities::StopProcess)
           sample_stop_process_unit = build(::CartridgeCore::Entities::Stoprocess::Unit)
           sample_scheduled_execution = build(::CartridgeCore::Entities::ScheduledTimelineExecution)
+          sample_execution_schedule = build(::CartridgeCore::Entities::ExecutionSchedule)
           initial_commit = ::CartridgeCore::Entities::TreeStates::RepositoryCommit.new(
             commit: real_commit,
             id: real_commit.id,
@@ -182,6 +187,7 @@ module CartridgeCore
             stop_processes:                [sample_stop_process.persistable_state],
             stop_process_units:            [sample_stop_process_unit.persistable_state],
             scheduled_timeline_executions: [sample_scheduled_execution],
+            execution_schedules:           [sample_execution_schedule],
           }
         end
       end

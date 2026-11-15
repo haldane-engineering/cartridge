@@ -26,7 +26,7 @@ module CartridgeCore
         end
         definition_json = definition.to_json
         _, tl_state = cache.timeline_state_for(Digest::MD5.hexdigest(definition_json), initial_definition: definition)
-        # Scheduled executions are global objects, mostly independent of any state, but we also need to track it statewise
+        # Scheduled executions are global objects, mostly independent of any state, but we also need to track it state wise
         # we use the execution to filter already run routes and stops as a continuity conduit. If no scheduled execution then
         # we initialize a new one without the id and go through with the rest of the process.
         tl_state = tl_state.merge(scheduled_timeline_executions: [
@@ -61,10 +61,9 @@ module CartridgeCore
           state_validation_mod = ::CartridgeCore::Entities::Concerns::StateIntegrityEnforcement
           route = route_class.new(**definition.dig(:routes, r_key).slice(*route_class.base_keys))
           # pass on tree context to route
-          route_context_params = opts.slice(*Entities::Trees::CONTEXT_KEYS).merge(parameters: opts.dig(
-            :parameters,
-            route.name.to_sym,
-          ) || {})
+          route_context_params =
+            opts.slice(*Entities::Trees::CONTEXT_KEYS)
+              .merge(parameters: opts[:parameters].values_at(:global, route.name.to_sym).compact.reduce(&:merge))
           route.context = CartridgeCore::Entities::Trees::Context.new(**route_context_params)
           # build reconcilers
           route.reconcilers = (definition.dig(:routes, r_key, :reconcilers) || {}).keys.map do |s_key|

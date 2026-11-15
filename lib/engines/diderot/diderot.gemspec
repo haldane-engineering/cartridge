@@ -32,4 +32,5 @@ Gem::Specification.new do |spec|
   spec.add_dependency 'rails', '~> 6.1.7', '>= 6.1.7.10'
   spec.add_dependency 'redis', '~> 4.0'
   spec.add_dependency 'selenium-webdriver', '4.44.0'
+  spec.add_dependency 'sidekiq', '~> 7.0.0'
 end

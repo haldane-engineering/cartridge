@@ -10,22 +10,30 @@ module CartridgeCore
           end
           task.execute
           sleep while task.running?
+        ensure
+          task.shutdown
         end
 
         def run!
-          # fetch the scheduled_executions in the cache
-          # load the timeline
-          cache = ::CartridgeCore::ICache.new
-          # TODO: delegate root_get
+          stored_executions = cache.root_get(:execution_schedules, ::CartridgeCore::Entities::ExecutionSchedule).select(&:due?)
+          resolve!(stored_executions.map(&:timeline_execution_id))
+          stored_executions.each(&->(stored_execution) { stored_execution.set(state: :executed).persist! })
+        end
+
+        def resolve!(select_execution_ids)
           executions = cache.root_get(:scheduled_timeline_executions, ::CartridgeCore::Entities::ScheduledTimelineExecution)
-          match = ->(execution) {
-            execution.queued? && Time.zone.parse(execution.executes_at).between?(1.minute.ago, 1.minute.from_now)
-          }
+          match = ->(execution) { select_execution_ids.include?(execution.id) }
           executions.select(&match).each do |execution|
             timeline = JSON.parse(cache.get({ timelines: { id: execution.timeline_id } }))
             ::CartridgeCore::Orchestrator(timeline.dig(:key), scheduled_timeline_execution: execution)
             execution.set(state: :processed).persist!
           end
+        end
+
+        private
+
+        def cache
+          @cache ||= ::CartridgeCore::ICache.new
         end
       end
     end
