@@ -5,6 +5,7 @@ require 'ostruct'
 module CartridgeCore
   module Entities
     BASE_KEYS = %i(name description sequence)
+    TREE_EXECUTION_STATES = %i(initial running paused).index_with(&:itself)
     TREE_KEYS = %i(
       name
       routes
@@ -27,6 +28,7 @@ module CartridgeCore
       stop_processes
       stop_process_units
       version
+
     )
 
     Tree = Struct.new(*TREE_KEYS, keyword_init: true) do
@@ -60,6 +62,23 @@ module CartridgeCore
       end
 
       def parent = self
+
+      # ########### Execution State Ops
+
+      def pause!
+        set(execution_state: TREE_EXECUTION_STATES[:paused]).persist!
+      end
+
+      def paused?
+        execution_state&.to_sym == TREE_EXECUTION_STATES[:paused] &&
+          context.execution_state.empty?
+      end
+
+      def resume!
+        set(execution_state: TREE_EXECUTION_STATES[:running]).persist!
+      end
+
+      # ############ End Execution state ops
 
       delegate :using_namespace, to: :context
 

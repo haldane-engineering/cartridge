@@ -17,6 +17,9 @@ module CartridgeCore
           route.timeline.register_activity!(route, :route_application_start)
           # assume here that sequence looks like this -> ["source_population", ["available_games_retrieval", 'game_logs_retrieval]]
           preselect_stops_in_context(populate_stops_with_sequence(route.stops)).each do |stop|
+            # Stops have the capability to pause timeline executions -- if they want execution deferred.
+            # We check for any of such events here and break.
+            break if route.timeline.paused?
             next process_stops_with_reconciler(stop) if stop.is_a?(Array)
 
             stop.apply!

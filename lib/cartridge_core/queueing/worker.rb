@@ -54,7 +54,7 @@ module CartridgeCore
         case context.using
         when :sidekiq || :resque || :solid_queue
           worker.set(wait_until: context.scheduled_at).perform_later(*context.arguments)
-        else worker.perform(context.arguments)
+        else worker.perform(*context.arguments)
         end
       end
     end

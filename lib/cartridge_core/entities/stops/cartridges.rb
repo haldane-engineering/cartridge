@@ -50,8 +50,8 @@ module CartridgeCore
             timeline = ::CartridgeCore::Entities::ScheduledTimelineExecution.new(**execution_args).persist!
             params = { route:, stop: self, scheduled_exection: timeline }
             ::CartridgeCore::Queueing::Worker.spawn!(::CartridgeCore::Queueing::Worker::ExecutionContext.new(**params))
-            timeline.pause! if halt_timeline
-            timeline.reload!
+            route.timeline.pause! if halt_timeline
+            route.timeline.reload!
           end
         end
       end

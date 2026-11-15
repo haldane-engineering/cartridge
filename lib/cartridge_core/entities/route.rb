@@ -38,7 +38,7 @@ module CartridgeCore
       end
 
       def traverse!
-        ::CartridgeCore::Services::Routes::TraversalService.call(self)
+        ::CartridgeCore::Services::Routes::TraversalService.call(self) unless timeline.paused?
       end
 
       def preceeding = timeline.routes[index - 1]

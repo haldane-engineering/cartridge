@@ -35,6 +35,7 @@ module CartridgeCore
       # so we set these to cache -> if not already present. Perhaps we even provide a default for
       # queueing backend, but I doubt.
       @timeline = CartridgeCore::Services::TreeBuilderService.build(timeline_key, **opts)
+      @timeline.resume! if opts[:scheduled_timeline_execution]
       sort_routes_by_sequence(@timeline.routes).map do |route|
         # remember that at this point route could also be [1,2]
         # after sorting through the routes, it could look like this [RouteClass1, [RouteClass2, RouteClass3]]
