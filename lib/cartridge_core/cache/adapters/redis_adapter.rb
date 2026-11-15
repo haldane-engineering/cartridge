@@ -191,7 +191,7 @@ module CartridgeCore
             stop_processes
             stop_process_units
             scheduled_timeline_executions
-
+            execution_schedules
           )
         end
 

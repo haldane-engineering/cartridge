@@ -4,6 +4,9 @@ module CartridgeCore
   module Entities
     module Stops
       module Cartridges
+        # A collection of batteries-included extensions for stops. We chooseto include any of them by
+        # appraising the workflow conf. stops with spawns_processes include the ProcessPropagation module
+        # - stops with schedulable: true, include the ScheduleExecution module.
         module Enablement
           %i(spawns_processes schedules_execution).each do |enablement_name|
             define_method(:"#{enablement_name}?", &-> { __send__(enablement_name) })
@@ -44,7 +47,9 @@ module CartridgeCore
               serialized_context: context,
               executes_at:,
             }
-            ::CartridgeCore::Entities::ScheduledTimelineExecution.new(**execution_args).tap(&:persist!)
+            timeline = ::CartridgeCore::Entities::ScheduledTimelineExecution.new(**execution_args).persist!
+            params = { route:, stop: self, scheduled_exection: timeline }
+            ::CartridgeCore::Queueing::Worker.spawn!(::CartridgeCore::Queueing::Worker::ExecutionContext.new(**params))
             timeline.pause! if halt_timeline
             timeline.reload!
           end
