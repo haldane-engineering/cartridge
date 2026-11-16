@@ -19,7 +19,7 @@ module Diderot
             # (they won't be available immediately after the game ended)
             #
             # schedule_streaming_replays! and logs!
-            scheduled_game_execution_ids = available_games..map.with_index do |game, g_index|
+            scheduled_game_execution_ids = available_games.map.with_index do |game, g_index|
               # Start the replay retrieval service 10 minutes before the game starts.
               replay_retrieval_context = {
                 game_id:      game.id,
@@ -29,6 +29,7 @@ module Diderot
               log_retrieval_schedule_at = game.scheduled_at + provider.approximate_game_length + LOG_AVAILABILITY_BUFFER
               logs_retrieval_context = replay_retrieval_context.merge(scheduled_at: log_retrieval_schedule_at)
               [replay_retrieval_context, logs_retrieval_context].map(&->(ctx) {
+                # pause execution at the last game for the day.
                 exec_ctx = { executes_at: ctx[:scheduled_at], halt_timeline: g_index == available_games.length - 1 }
                 schedule_timeline_execution!(ctx, **exec_ctx).id
               })

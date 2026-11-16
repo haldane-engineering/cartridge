@@ -72,7 +72,7 @@ module CartridgeCore
 
       def paused?
         execution_state&.to_sym == TREE_EXECUTION_STATES[:paused] &&
-          context.execution_state.empty?
+          context[:execution_context].empty?
       end
 
       def resume!

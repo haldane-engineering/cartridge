@@ -7,7 +7,7 @@ module Diderot
 
       # @param [String] workflow - the workflow timeline to be run by cartridge
       #  Diderot::Workflows::Runner.call(workflow: :nba_highlight_generation,
-      # parameters: { global: { provider_type: :nba, executes_schedules_with: :sidekiq } }
+      # parameters: { global: { provider_type: :nba, executes_schedules_with: :internal } }
       # )
       def call(workflow:, **context)
         # other orchestrator params include parameters for each of the stops in the workflow
