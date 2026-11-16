@@ -27,6 +27,7 @@ module CartridgeCore
       scheduled_timeline_executions
       stop_processes
       stop_process_units
+      execution_schedules
       version
 
     )

@@ -47,11 +47,14 @@ module CartridgeCore
               serialized_context: context,
               executes_at:,
             }
-            timeline = ::CartridgeCore::Entities::ScheduledTimelineExecution.new(**execution_args).persist!
-            params = { route:, stop: self, scheduled_exection: timeline }
-            ::CartridgeCore::Queueing::Worker.spawn!(::CartridgeCore::Queueing::Worker::ExecutionContext.new(**params))
+            s_execution = ::CartridgeCore::Entities::ScheduledTimelineExecution.new(**execution_args).persist!
+            params = { route:, stop: self, scheduled_exection: s_execution }
+            scheduled_execution = ::CartridgeCore::Queueing::Worker.spawn!(
+              ::CartridgeCore::Queueing::Worker::ExecutionContext.new(**params),
+            )
             route.timeline.pause! if halt_timeline
             route.timeline.reload!
+            scheduled_execution
           end
         end
       end

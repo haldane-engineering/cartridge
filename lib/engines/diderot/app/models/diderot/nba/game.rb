@@ -11,6 +11,8 @@ module Diderot
 
       has_one :game_log, class_name: '::Diderot::Nba::GameLog', dependent: :nullify
 
+      scope :unplayed, -> { where('scheduled_at >= NOW()').order(scheduled_at: :asc) }
+
       def participants = [away_team, home_team]
 
       # ################## MOVE ALL OF THESE TO A DECORATOR
