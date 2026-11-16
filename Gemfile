@@ -41,10 +41,15 @@ gem 'rack-cors'
 
 gem 'mailtrap'
 
+# Queue runners
+gem 'sidekiq', '~> 7.0.0'
+
+# Async processing
 gem 'concurrent-ruby', '1.3.4', require: 'concurrent'
 gem 'concurrent-ruby-ext'
 
 gem 'diderot', path: 'lib/engines/diderot'
+
 
 # Use Rack CORS for handling Cross-Origin Resource Sharing (CORS), making cross-origin AJAX possible
 # gem 'rack-cors'

@@ -41,5 +41,7 @@ module Cartridge
     config.autoload_paths << Rails.root.join('lib')
     config.eager_load_paths << Rails.root.join('lib')
     config.api_only = true
+
+    config.active_job.queue_adapter = :sidekiq
   end
 end

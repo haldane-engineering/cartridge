@@ -36,7 +36,7 @@ module CartridgeCore
           # route.context.parameters.dig(stop.name) -> will yield list of passed params for the stop.
           executor_args = [route.tree_state, route]
           changeset, errors = executor_class.execute_with_changeset_in_context(*executor_args, name: stop.name)
-          return fail!(stop, :stop_application_error, errors) if errors.present?
+          return fail!(stop, :stop_application_error, [stop.name, errors]) if errors.present?
 
           balancer_errors =  stop.balancers.map(&->(balancer) {
             balancer.validate_entity_state_with_changeset!(route.tree_state)

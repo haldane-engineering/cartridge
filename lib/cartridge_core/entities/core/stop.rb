@@ -14,7 +14,7 @@ module CartridgeCore
             stop = new(tree_state, route, **opts)
             stop.call
           rescue
-            [nil, [*stop.errors, e]]
+            [nil, [*stop.errors]]
           end
         end
 

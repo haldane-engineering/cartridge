@@ -25,6 +25,8 @@ module CartridgeCore
         raise NotImplementedError
       end
 
+      def log(message) = Rails.logger.info(message)
+
       delegate :fail!, :succeed, to: :context
 
       private
