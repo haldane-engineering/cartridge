@@ -43,7 +43,7 @@ module CartridgeCore
 
       def preceeding = timeline.routes[index - 1]
       def next = timeline.routes[index + 1]
-
+      def leaf_name = @leaf_name ||= name.split('::').last.underscore
       alias_method :parent, :timeline
     end
   end

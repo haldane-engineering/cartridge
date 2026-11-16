@@ -19,6 +19,8 @@ module Diderot
                 provider.team_class.find_or_create_by(**provider.formatter.team_attributes_from_json(team_json)).tap do |team|
                   populate_team_players!(team)
                 end unless team_already_populated?(team_json, teams:)
+              rescue *provider.request_error_classes
+                next
               end
               context.succeed(teams)
             end

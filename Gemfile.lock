@@ -368,6 +368,7 @@ DEPENDENCIES
   rubocop-rails
   rubocop-rspec
   rubocop-shopify
+  sidekiq (~> 7.0.0)
   spring
   tzinfo-data
   wkhtmltopdf-binary

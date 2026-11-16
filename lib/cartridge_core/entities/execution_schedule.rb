@@ -2,7 +2,7 @@
 
 module CartridgeCore
   module Entities
-    EXECUTION_SCHEDULE_KEYS = %i(route stop scheduled_at timeline_execution_id status)
+    EXECUTION_SCHEDULE_KEYS = %i(id route stop scheduled_at timeline_execution_id status)
     ExecutionSchedule = Struct.new(*EXECUTION_SCHEDULE_KEYS, keyword_init: true) do
       include CartridgeCore::Cache::Concerns::SelectivePersistence
       index(:execution_schedules)

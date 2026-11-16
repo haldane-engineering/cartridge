@@ -21,6 +21,8 @@ module Diderot
           events_suffix_gap
           game_clock_attributes
           resource_assets_manager
+          approximate_game_length
+          request_error_classes
         ).freeze
 
         DISTRIBUTION_CHANNELS = %i(youtube).index_with(&:itself)
@@ -110,6 +112,8 @@ module Diderot
             team_membership_class: ::Diderot::Nba::TeamMembership,
             game_class: ::Diderot::Nba::Game.includes(*%i(home_team away_team)),
             game_log_class: ::Diderot::Nba::GameLog,
+            approximate_game_length: 3.hours,
+            request_error_classes: [ProviderTransportError],
             replay_url_retriever: internal_replay_url_retriever,
             settings: {
               # store the api key securely

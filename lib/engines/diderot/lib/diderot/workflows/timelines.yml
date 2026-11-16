@@ -46,10 +46,22 @@ timelines:
             balancers:
               - required: []
                 using: available_games_retrieval/balancer
-          game_logs_retrieval:
+          available_games_scheduling:
             index: 2
+            parameters: []
+            name: available_games_scheduling
+            spawns_processes: false
+            schedules_execution: true
+            checks:
+              - required: []
+                using: available_games_scheduling/check
+            balancers:
+              - required: []
+                using: available_games_scheduling/balancer
+          game_logs_retrieval:
+            index: 3
             name: game_logs_retrieval
-            schedulable: true
+            schedules_execution: true
             checks:
               - required: []
                 using: game_logs_retrieval/check
@@ -58,9 +70,9 @@ timelines:
                 using: game_logs_retrieval/balancer
           game_replays_retrieval:
             name: game_replays_retrieval
-            index: 3
+            index: 4
             spawns_processes: true
-            schedulable: true
+            schedules_execution: true
             checks:
               - required: []
                 using: game_replays_downloader/check
@@ -86,7 +98,7 @@ timelines:
           replay_recomposition:
             index: 0
             parameters: []
-            schedulable: true
+            schedules_execution: true
             name: replay_recomposition
             checks:
               - required: ['source_population.downloaded_game_ids']
@@ -110,7 +122,7 @@ timelines:
             name: youtube_dispatch
             index: 0
             parameters: []
-            schedulable: true
+            schedules_execution: true
             spawns_processes: true
             checks:
               - required: ['source_population.available_game_ids', 'highlight_composition.composed_game_ids']

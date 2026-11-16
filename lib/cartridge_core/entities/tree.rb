@@ -27,6 +27,7 @@ module CartridgeCore
       scheduled_timeline_executions
       stop_processes
       stop_process_units
+      execution_schedules
       version
 
     )
@@ -71,7 +72,7 @@ module CartridgeCore
 
       def paused?
         execution_state&.to_sym == TREE_EXECUTION_STATES[:paused] &&
-          context.execution_state.empty?
+          context[:execution_context].empty?
       end
 
       def resume!

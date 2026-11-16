@@ -17,7 +17,8 @@ module CartridgeCore
             stop: stop.name,
             timeline_execution_id:,
             scheduled_at:,
-          ).persist!
+            id: Digest::SHA256.hexdigest(route.name + stop.name + scheduled_at.to_s),
+          ).persist!(route.timeline)
         end
       end
     end
