@@ -10,6 +10,9 @@ module CartridgeCore
 
         def self.apply!(*args) = new.apply!(*args)
 
+        # @param [CartridgeCore::Entities::Tree] tree
+        # @param [Hash] tl_state -> current tree state from cache
+        # @return [CartridgeCore::Entities::Tree] the loaded tree with it's cached entries
         def apply!(tree, tl_state)
           assign_timeline_attributes!(tl_state, tree)
           tree.tree_state = tree.trees.find(&->(tree) { tree.head == tl_state[:head].to_s })

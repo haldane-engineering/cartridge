@@ -1,6 +1,6 @@
 timelines:
   nba_highlight_generation:
-    key: highlight_generation
+    key: nba_highlight_generation
     description: Generate NBA highlights
     sequence: [0, [1, 2]]
     strategy: merge

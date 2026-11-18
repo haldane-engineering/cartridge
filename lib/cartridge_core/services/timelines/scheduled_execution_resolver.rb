@@ -35,14 +35,15 @@ module CartridgeCore
                   id:   timeline_execution.timeline_id || force_timeline_id,
                   type: :single,
                 })
-                timeline = timeline_from_cache.dig(:timeline)
+                timeline = Entities::Tree.new(**timeline_from_cache.dig(:timeline))
                 # the orchestrator re-runs the workflow, so this is likely exponentially time complex --
                 # hence the concurrent wrap.
-                ::CartridgeCore::Orchestrator(timeline.dig(:key), scheduled_timeline_execution: timeline_execution)
-
-                [timeline_execution, stored_execution].each { _1.set(state: :processed).persist! }
+                #
+                # Load the deinitions and the load_namespace from context -> and we are good to re-orchestrate :)
+                ::CartridgeCore::Orchestrator.call(timeline.key, scheduled_timeline_execution: timeline_execution)
+                [timeline_execution, stored_execution].each { _1.set(status: :processed).persist!(timeline) }
               rescue
-                [timeline_execution, stored_execution].each { _1.set(state: :failed).persist! }
+                [timeline_execution, stored_execution].each { _1.set(status: :failed).persist!(timeline) }
               end
             }
           end
