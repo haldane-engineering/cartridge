@@ -12,13 +12,13 @@ module CartridgeCore
         # timelines: {}, events: {}, trees: {}, commits: {}, resolver_processes: {}, resolver_process_units
         def initialize(root = :cartridge)
           @statements = []
-          @root_w_namespace = prefix_root(root) # could this include namespace? msaservices:cartridge
+          @root_w_namespace = prefix_root(root) # could this include namespace? haldaneeng:cartridge
         end
 
         def load!(timeline_id, **load_opts)
           # load_opts example { only, except, cursor: { limit: 1000, from: 0}, association_name: { limit: 1000, from: 0}}
           # redis appends the nested keys (index_key plus the query key) to the root namespace in the resulting set.
-          timeline = get(timeline: { id: timeline_id }).dig(:timeline)
+          timeline = get(timeline: { id: timeline_id, type: :single }).dig(:timeline)
           return unless timeline # not sure if to build a default object here and send as the response
 
           # firstly, remove the fields contained in the except params -> only applies to the first level (why? should apply at all levels: TODO)
@@ -61,7 +61,8 @@ module CartridgeCore
         # @param [Hash] hash containing keys $indexname_id -> { timeline: { id: 2 }, commit_id: 2 }
         def get(**query)
           result_set = query.entries.map do |(k, v)| # v is the actual entity id
-            index = k.to_s.split('_').first.pluralize
+            index = k.to_s.pluralize
+            query_type = v.delete(:type) || :group
             # assumption here should be that the first key in the value entry will always be id
             # TODO - look into how you can combine AND requests here
             # json_path = "$.timelines.*[?(@.definition_id == '#{definition_id}')]"
@@ -69,9 +70,12 @@ module CartridgeCore
             obj_query = "$.#{index}.[?(@.#{field_title} == '#{field_value}')]"
             p obj_query
             result = redis.call('JSON.GET', root_w_namespace, obj_query)
-            JSON.parse(result).first if result
+            next unless result
+
+            parsed_result = JSON.parse(result)
+            query_type == :group ? parsed_result.map(&:deep_symbolize_keys) : parsed_result.first.deep_symbolize_keys
           end
-          query.keys.zip(result_set.compact.map(&:deep_symbolize_keys)).to_h
+          query.keys.zip(result_set.compact).to_h
         end
 
         def root_get(key, klass)
@@ -90,7 +94,8 @@ module CartridgeCore
 
         def indices_already_set_up?
           index_resp = redis.call('JSON.GET', root_w_namespace, '$') || empty_index_response
-          index_resp.first && configuration[:full_key_set].map(&:to_s).sort == JSON.parse(index_resp).first.keys.sort
+          index_resp.first &&
+            configuration[:full_key_set].map(&:to_s).sort.uniq == JSON.parse(index_resp).first.keys.sort
         end
 
         def extract_values_and_persist!(args)
@@ -172,7 +177,7 @@ module CartridgeCore
             root_namespace:         :catridgecore,
             default_cursor_limit:   1000,
             default_cursor_offset:  0,
-            full_key_set:           %i(timelines trees) + root_index_keys,
+            full_key_set:           %i(trees timelines) + root_index_keys,
             empty_index_response:   '[]',
             eager_loadable_indices: %i(trees),
           }

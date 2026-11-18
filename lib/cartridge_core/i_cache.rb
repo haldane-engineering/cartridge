@@ -55,7 +55,7 @@ module CartridgeCore
     # @param [Hash | nil] the initial definition json -> we use this to set up a new timeline instance
     def timeline_state_for(definition_id, initial_definition:)
       @sample_definition = ::CartridgeCore::Entities::Definition.new(id: definition_id)
-      timeline_from_cache = adapter.get(timeline: { definition_id: definition_id }).dig(:timeline)
+      timeline_from_cache = adapter.get(timeline: { definition_id: definition_id, type: :single }).dig(:timeline)
       timeline = timeline_from_cache.presence || setup_initial_timeline!(definition_id, initial_definition.to_json)
       load!(timeline.dig(:id))
     end
@@ -65,7 +65,7 @@ module CartridgeCore
       adapter.snapshot!(*args)
     end
 
-    delegate :root_get, to: :adapter
+    delegate(*%i(root_get get), to: :adapter)
 
     private
 

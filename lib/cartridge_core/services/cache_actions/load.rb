@@ -12,8 +12,8 @@ module CartridgeCore
 
         def apply!(tree, tl_state)
           assign_timeline_attributes!(tl_state, tree)
-          # Yep I understand that tree.trees is an etymological fallacy - please allow :)
           tree.tree_state = tree.trees.find(&->(tree) { tree.head == tl_state[:head].to_s })
+          tree.context = CartridgeCore::Entities::Trees::Context.new(**tl_state[:context])
           # build state for each of the contained routes
           tree.routes.each { extract_route_state_keys!(_1, tree) }
           tree
@@ -57,6 +57,7 @@ module CartridgeCore
           when :events then ::CartridgeCore::Entities::EventBus::Event
           when :stop_process_units then ::CartridgeCore::Entities::StopProcess::Unit
           when :commits then ::CartridgeCore::Entities::TreeStates::Commit
+          when :context then ::CatridgeCore::Entities::TreeState::Context
           else "::CartridgeCore::Entities::#{key.singularize.camelize}".constantize
           end
         end

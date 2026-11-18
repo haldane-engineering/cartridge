@@ -18,6 +18,7 @@ module CartridgeCore
             timeline_execution_id:,
             scheduled_at:,
             id: Digest::SHA256.hexdigest(route.name + stop.name + scheduled_at.to_s),
+            status: :scheduled,
           ).persist!(route.timeline)
         end
       end
