@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+require 'cartridge_core/entities/execution_schedule'
+
 module CartridgeCore
   module Entities
     module Stops
@@ -45,6 +47,7 @@ module CartridgeCore
               id:                 SecureRandom.hex(8),
               timeline_id:        route.timeline.id,
               serialized_context: context,
+              status:             CartridgeCore::Entities::EXECUTION_SCHEDULE_STATUSES[:scheduled],
               executes_at:,
             }
             s_execution = ::CartridgeCore::Entities::ScheduledTimelineExecution.new(**execution_args)

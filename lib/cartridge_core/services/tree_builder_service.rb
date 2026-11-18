@@ -25,6 +25,8 @@ module CartridgeCore
           build_and_assign_tree_routes!(tree, definition)
         end
         definition_json = definition.to_json
+        # TL state represents the current timeline entry in the cache. for the redis adapter, that would be in index
+        # $.timelines NOT $.trees as we might assume. Need to rethink this implementation really.
         _, tl_state = cache.timeline_state_for(Digest::MD5.hexdigest(definition_json), initial_definition: definition)
         # Scheduled executions are global objects, mostly independent of any state, but we also need to track it state wise
         # we use the execution to filter already run routes and stops as a continuity conduit. If no scheduled execution then

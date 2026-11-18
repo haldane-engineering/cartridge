@@ -1,9 +1,12 @@
 # frozen_string_literal: true
 
+require 'cartridge_core/entities/execution_schedule'
 module CartridgeCore
   module Services
     module Timelines
       class ScheduledExecutionResolver
+        # include ::CartridgeCore::Services::Concerns::ConcurrentExecution
+
         def start!
           task = Concurrent::TimerTask.new(execution_interval: 60, run_now: true) do
             run!
@@ -15,20 +18,56 @@ module CartridgeCore
         end
 
         def run!
-          stored_executions = cache.root_get(:execution_schedules, ::CartridgeCore::Entities::ExecutionSchedule).select(&:due?)
-          resolve!(stored_executions.map(&:timeline_execution_id))
-          stored_executions.each(&->(stored_execution) { stored_execution.set(state: :executed).persist! })
+          stored_executions = cache.get(execution_schedules: {
+            status: CartridgeCore::Entities::EXECUTION_SCHEDULE_STATUSES[:scheduled],
+          }).dig(:execution_schedules)
+
+          stored_executions = stored_executions.map(&->(execution_json) {
+            ::CartridgeCore::Entities::ExecutionSchedule.new(**execution_json)
+          }).first(1)
+
+          actors = stored_executions.select(&:due?).map do |stored_execution|
+            -> {
+              begin
+                timeline_execution = stored_execution.scheduled_timeline_execution
+                force_timeline_id = '0c3b008b9a7341d8' # for testing.
+                timeline_from_cache = cache.get(timeline: {
+                  id:   timeline_execution.timeline_id || force_timeline_id,
+                  type: :single,
+                })
+                timeline = Entities::Tree.new(**timeline_from_cache.dig(:timeline))
+                # the orchestrator re-runs the workflow, so this is likely exponentially time complex --
+                # hence the concurrent wrap.
+                #
+                # Load the deinitions and the load_namespace from context -> and we are good to re-orchestrate :)
+                ::CartridgeCore::Orchestrator.call(timeline.key, scheduled_timeline_execution: timeline_execution)
+                [timeline_execution, stored_execution].each { _1.set(status: :processed).persist!(timeline) }
+              rescue
+                [timeline_execution, stored_execution].each { _1.set(status: :failed).persist!(timeline) }
+              end
+            }
+          end
+          actors.each(&:call)
+          # concurrently_execute_with_reconciliation!(actors, blocking: false)
         end
 
-        def resolve!(select_execution_ids)
-          executions = cache.root_get(:scheduled_timeline_executions, ::CartridgeCore::Entities::ScheduledTimelineExecution)
-          match = ->(execution) { select_execution_ids.include?(execution.id) }
-          executions.select(&match).each do |execution|
-            timeline = JSON.parse(cache.get({ timelines: { id: execution.timeline_id } }))
-            ::CartridgeCore::Orchestrator(timeline.dig(:key), scheduled_timeline_execution: execution)
-            execution.set(state: :processed).persist!
-          end
-        end
+        # def resolve!(select_execution_ids)
+        #   timeline_executions = cache.get(scheduled_timeline_executions:  {
+        #     status: CartridgeCore::Entities::EXECUTION_SCHEDULE_STATUSES[:scheduled],
+        #   }).dig(:scheduled_timeline_executions)
+
+        #   timeline_executions = timeline_executions.map(&->(execution_json) {
+        #     ::CartridgeCore::Entities::ScheduledTimelineExecution.new(**execution_json)
+        #   })
+
+        #   # TODO: Add group finders to redis adapter, so we can query directly for array inclusion.
+        #   match = ->(execution) { select_execution_ids.include?(execution.id) }
+        #   timeline_executions.select(&match).each do |execution|
+        #     timeline = JSON.parse(cache.get({ timelines: { id: execution.timeline_id } }))
+        #     ::CartridgeCore::Orchestrator(timeline.dig(:key), scheduled_timeline_execution: execution)
+        #     execution.set(state: :processed).persist!
+        #   end
+        # end
 
         private
 
