@@ -4,7 +4,7 @@ require 'ostruct'
 
 module CartridgeCore
   module Entities
-    BASE_KEYS = %i(name description sequence)
+    BASE_KEYS = %i(name description sequence key)
     TREE_EXECUTION_STATES = %i(initial running paused).index_with(&:itself)
     TREE_KEYS = %i(
       name
