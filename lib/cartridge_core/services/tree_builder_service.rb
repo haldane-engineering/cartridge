@@ -13,6 +13,9 @@ module CartridgeCore
         @timeline_key = timeline_key
         @opts = default_builder_opts.merge(options)
         @cache = CartridgeCore::ICache.new
+        # Scheduled executions are global objects, mostly independent of any state, but we also need to track it state wise
+        # we use the execution to filter already run routes and stops as a continuity conduit. If no scheduled execution then
+        # we initialize a new one without the id and go through with the rest of the process.
         @scheduled_execution = opts.dig(:scheduled_timeline_execution)
       end
 
@@ -28,12 +31,6 @@ module CartridgeCore
         # TL state represents the current timeline entry in the cache. for the redis adapter, that would be in index
         # $.timelines NOT $.trees as we might assume. Need to rethink this implementation really.
         _, tl_state = cache.timeline_state_for(Digest::MD5.hexdigest(definition_json), initial_definition: definition)
-        # Scheduled executions are global objects, mostly independent of any state, but we also need to track it state wise
-        # we use the execution to filter already run routes and stops as a continuity conduit. If no scheduled execution then
-        # we initialize a new one without the id and go through with the rest of the process.
-        tl_state = tl_state.merge(scheduled_timeline_executions: [
-          *tl_state.fetch(:scheduled_timeline_executions, []), scheduled_execution.id,
-        ]) if scheduled_execution.id
 
         ::CartridgeCore::Services::CacheActions::Load.apply!(tree, tl_state)
       end
