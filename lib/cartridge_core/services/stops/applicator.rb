@@ -27,7 +27,7 @@ module CartridgeCore
           check_errors = stop.checks.map(&->(check) {
             check.validate_entity_state_with_changeset!(route.tree_state)
           })
-          return fail!(stop, :stop_application_error, check_errors.map(&:message)) if check_errors.any?
+          return fail!(stop, :stop_application_error, check_errors.map(&:message)) if check_errors.compact.any?
 
           # executor_class here is the the stop defined in the main application -> e.g diderot::stops::available_games
           executor_class = stop.class_name.camelize.constantize

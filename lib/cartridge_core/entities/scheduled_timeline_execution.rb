@@ -9,17 +9,21 @@ module CartridgeCore
       def filter_routes(routes)
         return routes unless serialized_context
 
-        route_in_context = routes[serialized_context.dig(:route, :name)]
-        select = ->((_, v)) { v[:index] >= route_in_context[:index] }
-        routes.entries.keep_if(&select).to_h
+        route_in_context = routes[serialized_context.dig(:route).to_sym]
+        return routes unless route_in_context
+
+        match = ->((_, v)) { v[:index] >= route_in_context[:index] }
+        routes.entries.keep_if(&match).to_h
       end
 
       def filter_stops(stops)
         return stops unless serialized_context
 
-        stop_in_context = stops[serialized_context.dig(:stop, :name)]
-        select = ->((_, v)) { v[:index] >= stop_in_context[:index] }
-        stops.entries.keep_if(&select).to_h
+        stop_in_context = stops[serialized_context.dig(:stop).to_sym]
+        return stops unless stop_in_context
+
+        match = ->((_, v)) { v[:index] > stop_in_context[:index] }
+        stops.entries.keep_if(&match).to_h
       end
     end
   end

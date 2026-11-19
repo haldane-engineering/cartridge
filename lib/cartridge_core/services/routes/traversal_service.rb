@@ -16,6 +16,7 @@ module CartridgeCore
         def call
           route.timeline.register_activity!(route, :route_application_start)
           # assume here that sequence looks like this -> ["source_population", ["available_games_retrieval", 'game_logs_retrieval]]
+
           preselect_stops_in_context(populate_stops_with_sequence(route.stops)).each do |stop|
             # Stops have the capability to pause timeline executions -- if they want execution deferred.
             # We check for any of such events here and break.
@@ -47,7 +48,7 @@ module CartridgeCore
             next stop_for(s_index) unless s_index.is_a?(Array)
 
             s_index.map { |stop_index| [stop_index, stop_for(stop_index)] }
-          end
+          end.compact
         end
 
         def stop_for(index) = route.stops.find(&->(stop) { stop.index == index })
