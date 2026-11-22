@@ -62,7 +62,6 @@ module CartridgeCore
         def get(**query)
           result_set = query.entries.map do |(k, v)| # v is the actual entity id
             index = k.to_s.pluralize
-            query_type = v.delete(:type) || :group
             # assumption here should be that the first key in the value entry will always be id
             # TODO - look into how you can combine AND requests here
             # json_path = "$.timelines.*[?(@.definition_id == '#{definition_id}')]"
@@ -73,10 +72,14 @@ module CartridgeCore
             next unless result
 
             parsed_result = JSON.parse(result)
-            query_type == :group ? parsed_result.map(&:deep_symbolize_keys) : parsed_result.first.deep_symbolize_keys
+            next parsed_result.map(&:deep_symbolize_keys) if group_query_type?(query)
+
+            parsed_result.first&.deep_symbolize_keys
           end
           query.keys.zip(result_set.compact).to_h
         end
+
+        def group_query_type?(query_type) = query_type == :group
 
         def root_get(key, klass)
           index_resp = redis.call('JSON.GET', root_w_namespace, '$') || empty_index_response

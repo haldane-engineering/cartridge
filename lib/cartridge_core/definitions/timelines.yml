@@ -14,7 +14,7 @@ timelines:
         description: 
           Get all the games played and download their videos + logs \
           expectation is to have all the videos sent to S3 and move to 
-          the next step
+          the next step.
         sequence: [0, [1,2]]
         checks:
           - required: [] #changeset here should contain the expected keys

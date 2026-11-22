@@ -53,10 +53,15 @@ module CartridgeCore
 
     # @param [String] timeline_id well, the id of the timeline
     # @param [Hash | nil] the initial definition json -> we use this to set up a new timeline instance
-    def timeline_state_for(definition_id, initial_definition:)
+    # @param [Hash | nil] context -> user input for orchestration.
+    def timeline_state_for(definition_id, initial_definition:, context:)
       @sample_definition = ::CartridgeCore::Entities::Definition.new(id: definition_id)
       timeline_from_cache = adapter.get(timeline: { definition_id: definition_id, type: :single }).dig(:timeline)
-      timeline = timeline_from_cache.presence || setup_initial_timeline!(definition_id, initial_definition.to_json)
+      timeline = timeline_from_cache.presence || setup_initial_timeline!(
+        definition_id,
+        initial_definition.to_json,
+        context:,
+      )
       load!(timeline.dig(:id))
     end
 
@@ -71,11 +76,11 @@ module CartridgeCore
 
     attr_reader :adapter
 
-    def setup_initial_timeline!(definition_id, definition_json)
+    def setup_initial_timeline!(definition_id, definition_json, context:)
       initial_tree_state = @factory.build(::CartridgeCore::Entities::TreeState, attributes_only: true)
       version_id = Factory.initial_timestamp.to_s
       tree_state = initial_tree_state.merge(**initial_tree_state_args(version_id, definition_id))
-      timeline_tree = initial_timeline_tree(definition_id, definition_json, tree_state:)
+      timeline_tree = initial_timeline_tree(definition_id, definition_json, tree_state:).merge(context:)
       snapshot!(definition_id, timeline_tree)
       adapter.load!(timeline_tree[:id])
     end
@@ -97,7 +102,7 @@ module CartridgeCore
     #
     def initial_timeline_tree(definition_hash, definition_json, tree_state:)
       {
-        id:                            SecureRandom.hex(8),
+        id:                            definition_hash,
         head:                          Factory.initial_timestamp,
         definition_id:                 definition_hash,
         execution_state:               ::CartridgeCore::Entities::TREE_EXECUTION_STATES[:initial],
@@ -113,6 +118,7 @@ module CartridgeCore
         stop_process_units:            [],
         scheduled_timeline_executions: [],
         execution_schedules:           [],
+        context:                       {},
       }
     end
 

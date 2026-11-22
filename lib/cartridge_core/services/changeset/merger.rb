@@ -37,7 +37,7 @@ module CartridgeCore
             # will need to update this to find the right key from state
             tree_state.merge("#{without_deleted_qualifier(change_entry.key.to_s)}": change_entry.value)
           when :merge
-            tree_state.merge("#{change_entry.key}": tree_state[change_entry.key].merge(change_entry.value))
+            tree_state.merge("#{change_entry.key}": (tree_state[change_entry.key] || {}).merge(change_entry.value))
           when :push
             tree_state.merge("#{change_entry.key}": (tree_state[change_entry.key] || []).push(change_entry.value))
           when :concact

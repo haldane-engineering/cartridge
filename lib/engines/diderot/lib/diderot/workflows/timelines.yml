@@ -14,7 +14,7 @@ timelines:
         description: >
           Get all the games played and download their videos + logs
           expectation is to have all the videos sent to S3 and move to
-          the next step
+          the next step.
         sequence: [0, 1, 2, 3]
         checks:
           - required: [] # changeset here should contain the expected keys
@@ -87,7 +87,7 @@ timelines:
         index: 1
         description: |
           Get all the downloaded video ids, split into chunks using the highlightable events from
-          sportradar and merge the chunks into one output stream. Writes the output to the same folder
+          sportradar and merge the chunks into one output stream. It Writes the output to the same folder.
         sequence: [0]
         checks:
           - required: ['source_population.downloaded_game_ids']

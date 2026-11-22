@@ -6,7 +6,7 @@ module Diderot
       module Stops
         class AvailableGamesRetrieval < ::Diderot::Routes::ApplicableStop
           def call
-            available_games = provider.fetch_scheduled_games(route.context.parameters.dig(:date) || Time.zone.today)
+            available_games = provider.fetch_scheduled_games(date_in_context)
             extract_game_id = ->(g_json) {
               provider.game_class.find_or_create_by!(
                 provider.formatter.game_attributes_from_json(g_json)
@@ -15,6 +15,7 @@ module Diderot
             }
             available_game_ids = available_games.map(&extract_game_id)
             changeset_add(key: :available_game_ids, value: available_game_ids)
+            changeset_merge(key: :game_availabilities, value: [[date_in_context.to_s, available_game_ids]].to_h)
           end
         end
       end
