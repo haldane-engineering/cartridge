@@ -123,9 +123,9 @@ module Diderot
               identifier_key:                   'id',
               exact_teams_count:                30,
               min_team_membership_count:        12,
-              request_buffer:                   10.seconds,
+              request_buffer:                   2.seconds,
               # TODO: - find the league defined values for this.
-              team_memberships_range:           (12..70),
+              team_memberships_range:           (12..150),
               persistable_game_log_event_types: %w(twopointmade twopointmiss threepointmade threepointmiss),
             },
             timezone: 'US/Eastern',
