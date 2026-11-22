@@ -9,13 +9,19 @@ module Diderot
           REPLAY_AVAILABILITY_BUFFER = 10.minutes # start streaming 10 minutes early.
 
           def call
-            available_game_ids = route_state_get(:available_game_ids)
-            available_games = provider.game_class.unplayed.where(id: available_game_ids)
+            game_class = previously_scheduled_date? ? provider.game_class : provider.game_class.unplayed
+            available_game_ids = route_state_get(:game_availabilities)[date_in_context.to_s]
+            available_games = game_class.where(id: available_game_ids)
+            return changeset_add(
+              key: :available_game_ids,
+              value: available_game_ids,
+            ) if previously_scheduled_date?
+
             # games retrieved are played at different times -> first the replay, then the logs are available
             # 15-20 minutes after the game is done. We wait for 20 minutes -- such that we are able to predictably
             # release videos ~30 minutes after the game is completed.
             # At the moment we have to assume that each game is about 2:30 minutes. We'll keep it at 3 hours.
-            # and spinoff new workers 10 minutes after that threshold to get the game logs.
+            # and spinoff workers 10 minutes after that threshold to get the game logs.
             # (they won't be available immediately after the game ended)
             #
             # schedule_streaming_replays! and logs!

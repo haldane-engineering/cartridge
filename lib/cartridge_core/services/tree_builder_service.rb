@@ -17,6 +17,9 @@ module CartridgeCore
         # we use the execution to filter already run routes and stops as a continuity conduit. If no scheduled execution then
         # we initialize a new one without the id and go through with the rest of the process.
         @scheduled_execution = opts.dig(:scheduled_timeline_execution)
+        @context = opts.slice(*%i(parameters load_namespace)).merge(
+          execution_context: scheduled_execution.serialized_context || {},
+        )
       end
 
       def build
@@ -27,10 +30,15 @@ module CartridgeCore
           confirm_executable_files!(tree.using_namespace(:routes, definition.dig(:routes).keys))
           build_and_assign_tree_routes!(tree, definition)
         end
+
         definition_json = definition.to_json
         # TL state represents the current timeline entry in the cache. for the redis adapter, that would be in index
         # $.timelines NOT $.trees as we might assume. Need to rethink this implementation really.
-        _, tl_state = cache.timeline_state_for(Digest::MD5.hexdigest(definition_json), initial_definition: definition)
+        _, tl_state = cache.timeline_state_for(
+          Digest::MD5.hexdigest(definition_json),
+          initial_definition: definition,
+          context: @context,
+        )
 
         ::CartridgeCore::Services::CacheActions::Load.apply!(tree, tl_state)
       end
@@ -59,15 +67,18 @@ module CartridgeCore
           route_class = ::CartridgeCore::Entities::Route
           state_validation_mod = ::CartridgeCore::Entities::Concerns::StateIntegrityEnforcement
           route = route_class.new(**definition.dig(:routes, r_key).slice(*route_class.base_keys))
+
           # pass on tree context to route
           route_context_params =
             opts.slice(*Entities::Trees::CONTEXT_KEYS)
               .merge(parameters: opts[:parameters].values_at(:global, route.name.to_sym).compact.reduce(&:merge))
           route.context = CartridgeCore::Entities::Trees::Context.new(**route_context_params)
+
           # build reconcilers
           route.reconcilers = (definition.dig(:routes, r_key, :reconcilers) || {}).keys.map do |s_key|
             CartridgeCore::Entities::Reconciler.new(**definition.dig(:routes, r_key, :reconcilers, s_key))
           end
+
           # build checks and balancers for route
           route_path = [:routes, r_key]
           guard_entity_args = [route_path, tree, definition, state_validation_mod]
@@ -75,6 +86,7 @@ module CartridgeCore
           # build stops
           path = [:routes, r_key, :stops]
           confirm_executable_files!(tree.using_namespace(definition.dig(*path).keys, group: path.join('/')))
+
           route.stops = scheduled_execution.filter_stops(definition.dig(:routes, r_key, :stops)).keys.map do |s_key|
             stop_path = [:routes, r_key, :stops, s_key]
             stop = CartridgeCore::Entities::Stop.new(**definition.dig(*stop_path).merge(route:))

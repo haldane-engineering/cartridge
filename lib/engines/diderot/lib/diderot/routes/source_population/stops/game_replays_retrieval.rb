@@ -6,7 +6,7 @@ module Diderot
       module Stops
         class GameReplaysRetrieval < Diderot::Routes::ApplicableStop
           def call
-            available_game_ids = route_state_get(:available_game_ids)
+            available_game_ids = route_state_get(:game_availabilities)[date_in_context.to_s]
             available_games = provider.game_class.where(id: available_game_ids)
             retrieve_urls = lambda { |game|
               ->() {

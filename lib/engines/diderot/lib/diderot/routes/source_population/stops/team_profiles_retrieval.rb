@@ -6,6 +6,8 @@ module Diderot
       module Stops
         class TeamProfilesRetrieval < ::Diderot::Routes::ApplicableStop
           def call
+            #  to skip step 1 - Ideal process will be to add a skip step in the in context.parameters - really exciting!
+            # changeset_add(key: :available_team_ids, value: provider.team_class.ids)
             teams_ctx = ::Diderot::Routes::SourcePopulation::Services::CoreTeamRetrievalService.call(provider)
             return halt!(:team_profiles_retrieval_error, teams_ctx.errors) unless teams_ctx.success?
 

@@ -42,6 +42,10 @@ module Cartridge
     config.eager_load_paths << Rails.root.join('lib')
     config.api_only = true
 
+    config.session_store :cookie_store, key: 'catridge-main'
+    config.middleware.use ActionDispatch::Cookies
+    config.middleware.use config.session_store, config.session_options
+
     config.active_job.queue_adapter = :sidekiq
   end
 end

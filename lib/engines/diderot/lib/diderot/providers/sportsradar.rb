@@ -117,15 +117,15 @@ module Diderot
             replay_url_retriever: internal_replay_url_retriever,
             settings: {
               # store the api key securely
-              api_key:                          '7feHe9OgSijUCpkVNpwhbq65xDSkBGJWjgZNh183',
+              api_key:                          ENV.fetch('DIDEROT_SPORTSRADAR_API_KEY'),
               base_url:                         'https://api.sportradar.com/nba/trial/v8/en',
               access_level:                     :trial,
               identifier_key:                   'id',
               exact_teams_count:                30,
               min_team_membership_count:        12,
-              request_buffer:                   10.seconds,
+              request_buffer:                   2.seconds,
               # TODO: - find the league defined values for this.
-              team_memberships_range:           (12..50),
+              team_memberships_range:           (12..150),
               persistable_game_log_event_types: %w(twopointmade twopointmiss threepointmade threepointmiss),
             },
             timezone: 'US/Eastern',
