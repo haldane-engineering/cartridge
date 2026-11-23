@@ -28,7 +28,7 @@ module CartridgeCore
         attr_reader :changeset, :entity, :tree_state
 
         def strategies
-          @strategies ||= %i(add remove merge push concact split pop slice)
+          @strategies ||= %i(add remove merge push concat split pop slice)
         end
 
         def merge_in_changeset_with_strategy(change_entry)
@@ -40,7 +40,7 @@ module CartridgeCore
             tree_state.merge("#{change_entry.key}": (tree_state[change_entry.key] || {}).merge(change_entry.value))
           when :push
             tree_state.merge("#{change_entry.key}": (tree_state[change_entry.key] || []).push(change_entry.value))
-          when :concact
+          when :concat
             tree_state.merge("#{change_entry.key}": (tree_state[change_entry.key] || []) + change_entry.value)
           # rollback actions
           when :remove

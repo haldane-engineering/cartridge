@@ -15,7 +15,7 @@ timelines:
           Get all the games played and download their videos + logs
           expectation is to have all the videos sent to S3 and move to
           the next step.
-        sequence: [0, 1, 2, 3]
+        sequence: [0, 1, 2, 3, 4]
         checks:
           - required: [] # changeset here should contain the expected keys
             using: global/balancer
@@ -90,10 +90,10 @@ timelines:
           sportradar and merge the chunks into one output stream. It Writes the output to the same folder.
         sequence: [0]
         checks:
-          - required: ['source_population.downloaded_game_ids']
+          - required: ['downloaded_game_ids']
             using: global/check
         balancers:
-          - required: ['highlight_composition.composed_game_ids']
+          - required: ['composed_game_ids']
         stops:
           replay_recomposition:
             index: 0
@@ -101,10 +101,10 @@ timelines:
             schedules_execution: true
             name: replay_recomposition
             checks:
-              - required: ['source_population.downloaded_game_ids']
+              - required: ['downloaded_game_ids']
                 using: global/check
             balancers:
-              - required: ['highlight_composition.composed_game_ids']
+              - required: ['composed_game_ids']
                 using: global/balancer
       highlight_distribution:
         name: highlight_distribution
@@ -113,10 +113,10 @@ timelines:
           Programatically send the videos from the output to youtube. Distribution parameters
           are stored in the db.
         checks:
-          - required: ['source_population.available_game_ids', 'highlight_composition.composed_game_ids']
+          - required: ['available_game_ids', 'composed_game_ids']
             using: global/balancer
         balancers:
-          - required: ['highlight_distribution.distribution_game_ids']
+          - required: ['distribution_game_ids']
         stops:
           youtube_dispatch:
             name: youtube_dispatch
@@ -125,7 +125,7 @@ timelines:
             schedules_execution: true
             spawns_processes: true
             checks:
-              - required: ['source_population.available_game_ids', 'highlight_composition.composed_game_ids']
+              - required: ['available_game_ids', 'composed_game_ids']
                 using: global/balancer
             balancers:
-              - required: ['highlight_distribution.distribution_game_ids']
+              - required: ['distribution_game_ids']

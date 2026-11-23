@@ -13,22 +13,27 @@ module CartridgeCore
       # @returns [Models::Stop]
       def concurrently_execute_with_reconciliation!(actors, blocking = true)
         pool = Concurrent::FixedThreadPool.new(actors.count)
-        promises = actors.map { |actor| Concurrent::Promises.future(&actor) }
-        return Concurrent::Promises.zip(*promises).value if blocking
+        promises = actors.map { |actor| Concurrent::Promises.future_on(pool) { Rails.application.executor.wrap(&actor) } }
+        zipped = Concurrent::Promises.zip(*promises)
+        return zipped.value!.tap { shutdown!(pool) } if blocking
 
-        Concurrent::Promises.zip(*promises).on_fulfilment { shutdown!(pool) }
+        zipped.on_resolution do |ok, _v, reason|
+          Rails.logger.error(reason) unless ok
+          pool.shutdown
+        end
         promises
-      rescue
+      rescue => e
         shutdown!(pool)
+        raise e
       end
 
       private
 
       def shutdown!(pool)
-        if pool
-          pool.shutdown
-          pool.wait_for_termination
-        end
+        return unless pool
+
+        pool.shutdown
+        pool.wait_for_termination
       end
     end
   end

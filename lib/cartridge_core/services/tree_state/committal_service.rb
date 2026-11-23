@@ -46,18 +46,8 @@ module CartridgeCore
             ))
           end
           commit.assign_original_state!(original_tree_state)
-          # first rebuild mergeable state
-          # { a: :b, b_deleted: :a} -> { video_retrival_a: :b, video_retrieval_b_deleted: :a }
-          commitable_state = new_state.keys.each_with_object({}) do |key, n_state|
-            # prefix the name of the committing entity to the store key
-            # this has to be conditional -> if the name already includes the full
-            # commitable name then return as is -> else prepend the commitable_name
-            next n_state[key] = new_state[key] if key.to_s.include?(entity.commitable_name)
 
-            n_state[:"$.#{entity.commitable_name}.#{key}"] = new_state[key]
-          end
-
-          commitable_state = original_tree_state.merge(commitable_state)
+          commitable_state = original_tree_state.merge(new_state)
           pre_commit_assignment_state = commitable_state.dup
           #  changeset.keys -> ["_entity_name_actual_key_name_cX"].
           #  During the merge, the old values should already be replaced
@@ -65,7 +55,7 @@ module CartridgeCore
           # the new commit id -> all commits start with xC092234934
           changeset.map(&:key).each do |change_entry_key|
             s_key, _ = tree_state_entry_for(change_entry_key, pre_commit_assignment_state)
-            pre_commit_assignment_state[:"#{original_key_for(s_key.to_s)}.#{commit.id}"] =
+            pre_commit_assignment_state[:"$.#{entity.commitable_name}.#{change_entry_key}.#{commit.id}"] =
               pre_commit_assignment_state.delete(s_key)
           end
           # assign the final state and save to cache. Subsequent references will
@@ -105,7 +95,7 @@ module CartridgeCore
           # we can confidently split the string and rejoin without the suffix
           key_parts = state_key.split('_')
           commit_suffix = key_parts[key_parts.length - 1]
-          state_key = state_key.tr("_#{commit_suffix}") if commit_suffix.starts_with?(COMMIT_PREFIX)
+          state_key = state_key.tr(".#{commit_suffix}") if commit_suffix.starts_with?(COMMIT_PREFIX)
           state_key
         end
       end

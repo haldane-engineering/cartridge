@@ -13,9 +13,8 @@ module Diderot
                 .except(*%w(id)),
               ).id
             }
-            available_game_ids = available_games.map(&extract_game_id)
-            changeset_add(key: :available_game_ids, value: available_game_ids)
-            changeset_merge(key: :game_availabilities, value: [[date_in_context.to_s, available_game_ids]].to_h)
+            game_ids = available_games.map(&extract_game_id)
+            changeset_merge(key: :game_availabilities, value: [[date_in_context.to_s, game_ids]].to_h)
           end
         end
       end
