@@ -22,7 +22,7 @@ module Diderot
                 game.update(game_log_id: game_log.id)
               end
             end
-            changeset_concact(
+            changeset_concat(
               key: :game_log_ids,
               value: provider.game_log_class.where(game_id: available_game_ids).ids,
             )

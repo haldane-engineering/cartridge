@@ -13,9 +13,7 @@ module CartridgeCore
           def execute_with_changeset_in_context(tree_state, route, **opts)
             stop = new(tree_state, route, **opts)
             stop.call
-          rescue => e
-            require 'pry'
-            binding.pry
+          rescue
             [nil, [*stop.errors]]
           end
         end

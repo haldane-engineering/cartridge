@@ -30,10 +30,10 @@ module CartridgeCore
       private
 
       def shutdown!(pool)
-        if pool
-          pool.shutdown
-          pool.wait_for_termination
-        end
+        return unless pool
+
+        pool.shutdown
+        pool.wait_for_termination
       end
     end
   end

@@ -28,7 +28,7 @@ module CartridgeCore
         attr_reader :changeset, :entity, :tree_state
 
         def strategies
-          @strategies ||= %i(add remove merge push concact split pop slice)
+          @strategies ||= %i(add remove merge push concat split pop slice)
         end
 
         def merge_in_changeset_with_strategy(change_entry)
