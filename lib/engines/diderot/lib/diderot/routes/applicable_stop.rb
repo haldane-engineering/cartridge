@@ -18,6 +18,12 @@ module Diderot
       def previously_scheduled_date?
         date_in_context < Time.zone.today
       end
+
+      def available_game_ids
+        # retrieves the game scheduled for processing from the scheduled execution state -> takes precedence.
+        game_id_in_ctx = route.context.execution_context.try(*%i(dig game_id))
+        game_id_in_ctx ? [game_id_in_ctx] : route_state_get(:game_availabilities)[date_in_context.to_s]
+      end
     end
   end
 end

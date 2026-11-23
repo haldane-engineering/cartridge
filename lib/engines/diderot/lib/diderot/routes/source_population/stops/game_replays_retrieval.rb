@@ -6,12 +6,11 @@ module Diderot
       module Stops
         class GameReplaysRetrieval < Diderot::Routes::ApplicableStop
           def call
-            available_game_ids = route_state_get(:game_availabilities)[date_in_context.to_s]
             available_games = provider.game_class.where(id: available_game_ids)
             retrieve_urls = lambda { |game|
               ->() {
                 provider.replay_url_retriever.call(game, provider:)
-                changeset_concact(key: :downloaded_game_ids, value: game.id)
+                changeset_concat(key: :downloaded_game_ids, value: game.id)
               }
             }
             # the assumption here is that every game is completed at the same time which is obviously a false assumption

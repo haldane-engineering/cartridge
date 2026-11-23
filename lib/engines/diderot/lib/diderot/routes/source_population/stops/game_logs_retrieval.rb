@@ -10,8 +10,6 @@ module Diderot
             # before this stop is run -> it has to check that this is present in state
             # ensure that this is defined in the orchestration.yml, available game ids is populate
             # by the preceeding step (AvailableGamesRetrieval)
-            # discard already retrieved game ids. might not be necessary tbh
-            available_game_ids = route_state_get(:game_availabilities)[date_in_context.to_s]
             game_ids = available_game_ids - provider.game_log_class.pluck(:game_id)
             provider.game_class.where(id: game_ids).find_each do |game|
               sleep GAME_RETRIEVAL_BUFFER

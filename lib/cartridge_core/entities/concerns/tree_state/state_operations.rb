@@ -65,9 +65,9 @@ module CartridgeCore
           end
 
           def entry_for(accessors)
-            current_key = current.keys.find do |key|
+            current_key = current.keys.select do |key|
               accessors.all? { key.split('.').include?(_1) }
-            end
+            end.last
             [current_key, current[current_key]]
           end
         end

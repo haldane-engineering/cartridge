@@ -13,7 +13,9 @@ module CartridgeCore
           def execute_with_changeset_in_context(tree_state, route, **opts)
             stop = new(tree_state, route, **opts)
             stop.call
-          rescue
+          rescue => e
+            require 'pry'
+            binding.pry
             [nil, [*stop.errors]]
           end
         end
@@ -50,10 +52,10 @@ module CartridgeCore
         def capture_error(e) = errors.push(e)
 
         def route_state_get(key)
-          # TODO: I do not need to split this key into the key parts
           route.timeline.reload!
           transform = ->(str) { str.split('::').last.underscore }
-          route.tree_state.get("#{transform.call(route.name)}.#{transform.call(name)}.#{key}")
+          s_key = "#{transform.call(route.name)}.#{transform.call(name)}.#{key}"
+          route.tree_state.get(s_key)
         end
 
         def state_get(key)

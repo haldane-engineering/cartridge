@@ -64,6 +64,10 @@ module CartridgeCore
         Digest::SHA256.hexdigest(current.to_json + definition_id)
         [COMMIT_ID_SLICING_RANGE]
       end
+
+      def current_key_for(state_entry_key)
+        current.keys.find(&->(key) { key.include?("#{state_entry_key}.#{head}") })
+      end
     end
   end
 end
