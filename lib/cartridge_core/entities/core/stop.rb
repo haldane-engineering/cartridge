@@ -63,7 +63,9 @@ module CartridgeCore
           # but during it's own execution (which is pre-commital) it would fetch from it's internal route state using
           # #route_state_get
           route.timeline.reload!
-          route.timeline.tree_state.get(key)
+          match_key = ->(s_key) { s_key.include?(key.to_s) }
+          latest_key = route.timeline.tree_state.current.keys.find(&match_key)
+          route.timeline.tree_state.current[latest_key]
         end
       end
     end

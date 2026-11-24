@@ -6,9 +6,10 @@ module Diderot
       module Stops
         class GameReplaysRetrieval < Diderot::Routes::ApplicableStop
           def call
-            available_games = provider.game_class.where(id: available_game_ids)
             # TODO: this stop should take a parameter specifying with replay source should be engaged
             # retrieve_source: :replay || :stream -> provider selects as fit.
+            # changeset_add(key: :downloaded_game_ids, value: available_game_ids)
+            available_games = provider.game_class.where(id: available_game_ids)
             retrieve_urls = lambda { |game|
               ->(_, _) {
                 provider.replay_url_retriever.call(game, provider:)

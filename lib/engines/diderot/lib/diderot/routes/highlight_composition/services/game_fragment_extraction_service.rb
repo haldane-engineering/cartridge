@@ -9,7 +9,7 @@ module Diderot
 
           FRAGMENT_KEYS = %i(game_clock real_video_time)
           CLOCK_PATTERN = /\A(1[0-2]|\d):[0-5]\d\z/
-          PROBE_START = 600
+          PROBE_START = 1200 # always start at 20 minutes
           PROBE_STEP = 60 # increment by 2 miunutes in every loop
           MAX_PROBES = 180
           REQUIRED_MATCHES = 3
@@ -93,7 +93,7 @@ module Diderot
           end
 
           def pad_clock_box(left:, top:, width:, height:)
-            pad_left = (height * 0.5).round
+            pad_left = (height * 2.2).round
             pad_rest = (height * 0.25).round
 
             {

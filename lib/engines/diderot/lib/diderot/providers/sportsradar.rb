@@ -276,7 +276,7 @@ module Diderot
                   game.participants.map(&:full_name).join(' vs '),
                   game.metadata['special_context_title'], # e.g Nba finals will have special context 'Nba Finals Game 1'
                   "| #{game.scheduled_at.strftime("%B %-d, %Y")}",
-                ].join(', ')
+                ].join(' ')
               end
 
               def extract!(game)

@@ -7,11 +7,11 @@ module Nba
         # decorates ::Diderot::Nba::Game
         delegate_all
 
-        COPYRIGHT_DISCLAIMER = <<~str
+        COPYRIGHT_DISCLAIMER = <<~STR.chomp
           This video was edited to follow youtube's fair use guidelines:
           Copyright Disclaimer under Section 107 of the copyright act 1976, allowance is
           made for fair use for purposes such as criticism, comment, news reporting, scholarship, and research.
-        str
+        STR
 
         def keywords
           @keywords ||= begin
@@ -22,13 +22,15 @@ module Nba
         end
 
         def description
-          @description ||= <<~str
+          @description ||= <<~STR.chomp
             #{preamble_tags.join(", ")}
 
             #{full_identifier.gsub("-", " ")}.
 
+            Experimental workflow orchestration by https://haldaneengineering.com
+
             #{COPYRIGHT_DISCLAIMER}
-          str
+          STR
         end
 
         private

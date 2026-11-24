@@ -7,7 +7,9 @@ module CartridgeCore
         include ::CartridgeCore::Errors::DynamicPropagation
 
         def validate_entity_state_with_changeset!(tree_state)
-          halt!(:missing_state_key_error) if required.any? { |c_entry| !tree_state.dig(c_entry) }
+          halt!(:missing_state_key_error) if required.any? do |c_entry|
+            !tree_state.current.keys.none?(&->(key) { key.include?(c_entry) })
+          end
         end
 
         module Core
