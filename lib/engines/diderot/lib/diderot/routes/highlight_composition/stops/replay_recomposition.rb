@@ -16,10 +16,10 @@ module Diderot
             # only check for videos populated today or else specified otherwise. But I think I already addressed this
             # with commits. Investigate
             composed_game_ids = state_get(:composed_game_ids) || []
-            composable_game_ids = logs.map(&:game_id) - composed_game_ids
+            composable_game_ids = logs.map(&:game_id) - composed_game_ids - [54]
             composed_games_contexts = composable_game_ids.map do |game_id|
               ::Diderot::Routes::HighlightComposition::Services::ReplayCompositionService.call(
-                game: provider.game_log_class.find_by(game_id: game_id),
+                game: provider.game_class.find_by(id: game_id),
                 provider:,
               )
             end
@@ -27,6 +27,7 @@ module Diderot
             failed_videos = composed_games_contexts.map(&:failed?)
             successfully_composed_game_ids = successfully_composed.map(&:payload)
             min_composed_videos = (downloaded_game_ids * FAILED_COMPOSED_VIDEOS_THRESHOLD).to_i
+            # only proceed if we half at least half of the videos ready for dispatch.
             if failed_videos.size >= min_composed_videos
               return halt!(:highlight_composition_error, failed_videos.map(&:errors).flat_map(&:to_s))
             end

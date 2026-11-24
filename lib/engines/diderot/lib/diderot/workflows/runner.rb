@@ -7,7 +7,7 @@ module Diderot
 
       # @param [String] workflow - the workflow timeline to be run by cartridge
       #  Diderot::Workflows::Runner.call(workflow: :nba_highlight_generation,
-      # parameters: { global: { provider_type: :nba, executes_schedules_with: :internal, date: Time.zone.yesterday  } }
+      # parameters: { global: { provider_type: :nba, executes_schedules_with: :internal, date: Time.zone.yesterday - 1.day } }
       # )
       # )
       def call(workflow:, **context)

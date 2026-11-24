@@ -2,7 +2,7 @@ timelines:
   nba_highlight_generation:
     key: nba_highlight_generation
     description: Generate NBA highlights
-    sequence: [0, [1, 2]]
+    sequence: [0, 1, 2]
     strategy: merge
     reconcilers:
       log_replay_reconciler:
@@ -99,6 +99,7 @@ timelines:
             index: 0
             parameters: []
             schedules_execution: true
+            spawns_processes: true
             name: replay_recomposition
             checks:
               - required: ['downloaded_game_ids']
@@ -118,14 +119,14 @@ timelines:
         balancers:
           - required: ['distribution_game_ids']
         stops:
-          youtube_dispatch:
-            name: youtube_dispatch
+          distribution_channels_export:
+            name: distribution_channels_export
             index: 0
             parameters: []
             schedules_execution: true
             spawns_processes: true
             checks:
-              - required: ['available_game_ids', 'composed_game_ids']
+              - required: []
                 using: global/balancer
             balancers:
               - required: ['distribution_game_ids']

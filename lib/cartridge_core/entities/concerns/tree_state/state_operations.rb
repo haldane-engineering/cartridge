@@ -11,7 +11,7 @@ module CartridgeCore
           # @return [Any]
           def get(key)
             # ex: 'available_games_retrieval.game_ids' -> '$st_available_games_retrieval.game_ids.xC03434j454"
-            key_parts = key.split('.')
+            key_parts = key.to_s.split('.')
             leaf_field = key_parts.pop # 'game_ids' from example
             key_parts = key_parts.reverse.map.with_index(&->(entry, index) {
               "#{key_index_prefixes[index.to_s]}_#{entry}"

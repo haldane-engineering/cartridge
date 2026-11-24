@@ -125,7 +125,6 @@ module Diderot
 
             iframe_element = find('iframe[src*="crack-nba"]', wait: 15)
 
-            # 2. Inject popup destruction directly into the iframe right now
             within_frame(iframe_element) do
               page.execute_script(<<~JS)
                 window.open = function() { return null; };
