@@ -34,7 +34,7 @@ module Diderot
 
             changeset_add(key: :composed_game_ids, value: successfully_composed_game_ids)
             changeset_add(
-              key: :failed_games_in_composition,
+              key: :failed_games_during_composition,
               value: downloaded_game_ids - successfully_composed_game_ids,
             )
           end
