@@ -3,7 +3,7 @@
 module Diderot
   module Providers
     module Sportsradar
-      class NBA
+      class NBA < ::Diderot::Providers::Base
         include Concerns::ExternalRequestCacheable
 
         CONFIG_KEYS = %i(
