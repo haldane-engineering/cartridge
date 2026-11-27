@@ -52,6 +52,7 @@ module Diderot
 
                 fragment.set(success: status.success?, output:)
               end
+
               manifest_path = "#{dir_path}/manifest.txt"
               manifest_txt = fragments.filter(&:success?).each_with_index.reduce('', &->(sum, (fragment, index)) {
                 sum += "#{index.zero? ? "" : "\n"} file #{chunks_dir.first}/#{fragment.slug}.mp4"
