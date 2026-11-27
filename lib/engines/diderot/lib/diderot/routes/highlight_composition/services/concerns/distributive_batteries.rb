@@ -11,7 +11,7 @@ module Diderot
 
               # @param [Array<::ReplayCompositionService::Fragment>] fragments list of fragments for the video
               # @param [::Diderot::Providers::Base] provider - standard provider
-              def partition_fractally!(fragments, **options)
+              def compose_fractally!(fragments, **options)
                 # Get the total number of videos -> find the number of fractions for the provider
                 # split the list of fragments into the quotient of (total_no_of_videos / fraction_count)
                 # create a fractions folder, it should contain fraction_count number of folders.
@@ -20,6 +20,7 @@ module Diderot
                 provider, directory_path, game = options.values_at(*%i(provider directory_path game))
                 FileUtils.mkdir_p("#{directory_path}/fractions")
                 quotient = (fragments.size / provider.game_clock_attributes[:fraction_count]).round
+
                 # naive implementation to split evenly without game clock integrity - but in this context
                 # I'd argue that the oversight is trivial since we end up distributing a continuous stream.-
                 fragments.each_slice(quotient).map.with_index do |fragments, index|

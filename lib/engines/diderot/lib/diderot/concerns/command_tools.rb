@@ -56,7 +56,7 @@ module Diderot
             end
             system("HOMEBREW_NO_AUTO_UPDATE=1 #{opts[:install_with] || "brew install #{bin}"}")
           end
-          opts[:spawn] ? Open3.popen3(cmd) : Open3.capture3(cmd)
+          opts[:spawn] ? Open3.popen3(cmd) : Open3.capture3(cmd, **opts.slice(*%i(stdin_data)))
         end
       end
     end
